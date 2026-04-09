@@ -93,11 +93,14 @@ Cloning downloads a copy of the plugin's code to your computer.
 
 ## Step 5 — Install claude-mem
 
-Now install the plugin using npx (which comes bundled with Node.js):
+Install the plugin globally using npm, then run the installer. On Windows, this two-step approach is more reliable than using `npx` directly:
 
 ```
-npx claude-mem install
+npm install -g claude-mem
+claude-mem install
 ```
+
+> **Why two commands?** On Windows, `npx claude-mem install` sometimes fails with a "not recognized" error because Windows cannot find the executable that npx downloads. Installing globally with `npm install -g` first ensures Windows registers the command properly.
 
 This command will:
 - Automatically download and install any additional dependencies (Bun, uv) if they are missing
@@ -105,6 +108,8 @@ This command will:
 - Create a settings file at `C:\Users\YourName\.claude-mem\settings.json`
 
 > **Tip:** If you are asked "Do you want to allow this?" or see a Windows Firewall popup during install, click **Allow** — the plugin runs a small local web service on port 37777 that only your computer can access.
+
+**If `claude-mem install` still fails**, open a new Command Prompt window and try again — sometimes the PATH needs a fresh terminal to update after a global install.
 
 ---
 
@@ -135,6 +140,20 @@ This shows a dashboard of everything claude-mem has stored.
 ---
 
 ## Troubleshooting
+
+### "'claude-mem' is not recognized as an internal or external command"
+This is the most common Windows issue. `npx claude-mem install` downloads the package but Windows cannot find the executable.
+
+**Fix:**
+1. Install globally first:
+   ```
+   npm install -g claude-mem
+   ```
+2. Open a **new** Command Prompt window (important — the old one won't have the updated PATH).
+3. Run:
+   ```
+   claude-mem install
+   ```
 
 ### "npx is not recognized" or "npm is not recognized"
 Node.js did not install correctly or your PATH was not updated.
