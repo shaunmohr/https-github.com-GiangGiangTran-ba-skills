@@ -1,0 +1,132 @@
+{
+  "name": "BMA_Enabling_Tasks_New_Task_Assignment",
+  "description": "Triggered immediately when a new enabling task is created in SharePoint (or an existing task has its department reassigned). Notifies the responsible department's superintendent and posts to the department's Teams channel. This replaces the current word-of-mouth task communication.",
+  "trigger": {
+    "type": "ApiConnection",
+    "description": "Triggers on creation of a new item in EnabledTasks — also fires on update when Department field changes",
+    "inputs": {
+      "host": {
+        "connectionName": "shared_sharepointonline",
+        "operationId": "OnNewItem",
+        "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+      },
+      "parameters": {
+        "dataset": "https://bhp.sharepoint.com/sites/BMAEnablingTasks",
+        "table": "EnabledTasks"
+      }
+    }
+  },
+  "actions": {
+    "Condition_Not_Unplanned": {
+      "type": "If",
+      "order": 1,
+      "description": "Skip notification for unplanned tasks captured during shift log (already complete by definition)",
+      "expression": {
+        "equals": ["@triggerBody()?['IsUnplanned']", false]
+      },
+      "actions": {
+        "Get_Department_Record": {
+          "type": "ApiConnection",
+          "order": 1,
+          "description": "Look up department to get Teams channel and superintendent",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetItems",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+            },
+            "parameters": {
+              "dataset": "https://bhp.sharepoint.com/sites/BMAEnablingTasks",
+              "table": "Departments",
+              "$filter": "Title eq '@{triggerBody()?['Department']}' and Site eq '@{triggerBody()?['Site']}'",
+              "$top": 1
+            }
+          }
+        },
+        "Get_TaskType_Details": {
+          "type": "ApiConnection",
+          "order": 2,
+          "inputs": {
+            "host": {
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetItem",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+            },
+            "parameters": {
+              "dataset": "https://bhp.sharepoint.com/sites/BMAEnablingTasks",
+              "table": "TaskTypes",
+              "id": "@{triggerBody()?['TaskTypeId']}"
+            }
+          }
+        },
+        "Get_Equipment_Movement": {
+          "type": "ApiConnection",
+          "order": 3,
+          "description": "Look up linked equipment movement if one is set",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetItem",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+            },
+            "parameters": {
+              "dataset": "https://bhp.sharepoint.com/sites/BMAEnablingTasks",
+              "table": "EquipmentMovements",
+              "id": "@{if(empty(triggerBody()?['EquipmentMovementId']), '0', triggerBody()?['EquipmentMovementId'])}"
+            }
+          },
+          "runAfter": {
+            "Get_TaskType_Details": ["Succeeded"]
+          }
+        },
+        "Post_To_Teams_Channel": {
+          "type": "ApiConnection",
+          "order": 4,
+          "description": "Post new task assignment to department Teams channel",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_teams",
+              "operationId": "PostMessageToConversation",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams"
+            },
+            "parameters": {
+              "poster": "Flow bot",
+              "location": "Channel",
+              "body/recipient/groupId": "@{first(body('Get_Department_Record')?['value'])?['TeamsGroupId']}",
+              "body/recipient/channelId": "@{first(body('Get_Department_Record')?['value'])?['TeamsChannelId']}",
+              "body/messageBody": "## 📌 New Enabling Task Assigned\n\n@{if(equals(triggerBody()?['IsOnCriticalPath'], true), '🔴 **CRITICAL PATH TASK**\n\n', '')}**@{triggerBody()?['Title']}**\n\n| Field | Value |\n|---|---|\n| **Task Type** | @{body('Get_TaskType_Details')?['Title']} |\n| **Site** | @{triggerBody()?['Site']} |\n| **Pit / Block** | @{if(empty(triggerBody()?['PitBlock']), '—', triggerBody()?['PitBlock'])} |\n| **Planned Start** | @{formatDateTime(triggerBody()?['PlannedStartDate'], 'dd MMM yyyy')} |\n| **Must Complete By** | @{formatDateTime(triggerBody()?['PlannedEndDate'], 'dd MMM yyyy')} |\n| **Duration (P50)** | @{triggerBody()?['PlannedDurationDays']} days |\n| **Priority** | @{triggerBody()?['PriorityLevel']} |\n| **Linked Equipment Move** | @{if(empty(triggerBody()?['EquipmentMovementId']), '—', body('Get_Equipment_Movement')?['Title'])} |\n\n**Done Definition:**\n> @{body('Get_TaskType_Details')?['DoneDefinition']}\n\n*Assigned by: @{triggerBody()?['PlannerEmail']?['DisplayName']}*\n\n*Open the BHP Enabling Task Manager app to view full details and update status.*"
+            }
+          }
+        },
+        "Notify_Superintendent_Direct": {
+          "type": "ApiConnection",
+          "order": 5,
+          "description": "Send a direct message to the superintendent — they may not see the channel post immediately",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_teams",
+              "operationId": "PostMessageToConversation",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams"
+            },
+            "parameters": {
+              "poster": "Flow bot",
+              "location": "Chat with Flow bot",
+              "body/recipient/to": "@{first(body('Get_Department_Record')?['value'])?['SuperintendentEmail']?['Email']}",
+              "body/messageBody": "Hi @{first(body('Get_Department_Record')?['value'])?['Title']} Superintendent,\n\nA new enabling task has been assigned to your department:\n\n**@{triggerBody()?['Title']}**\n- Start: @{formatDateTime(triggerBody()?['PlannedStartDate'], 'dd MMM')}\n- Must complete by: **@{formatDateTime(triggerBody()?['PlannedEndDate'], 'dd MMM yyyy')}**\n- Priority: @{triggerBody()?['PriorityLevel']}@{if(equals(triggerBody()?['IsOnCriticalPath'], true), '\n\n🔴 **This task is on the critical path. Any delay will impact the equipment movement schedule.**', '')}\n\nPlease confirm resourcing and open the task in the Enabling Task Manager app."
+            }
+          }
+        }
+      }
+    }
+  },
+  "connections": {
+    "shared_sharepointonline": {
+      "connectionName": "shared_sharepointonline",
+      "id": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+    },
+    "shared_teams": {
+      "connectionName": "shared_teams",
+      "id": "/providers/Microsoft.PowerApps/apis/shared_teams"
+    }
+  }
+}

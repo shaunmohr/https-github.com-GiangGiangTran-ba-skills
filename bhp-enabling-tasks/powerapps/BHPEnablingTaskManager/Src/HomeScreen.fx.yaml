@@ -1,0 +1,573 @@
+- 'HomeScreen As screen':
+    Properties:
+      Fill: =gblColPageBg
+    Children:
+
+    # ── HEADER ────────────────────────────────────────────────────────────────
+    - 'Home_Header_Rect As rectangle':
+        Properties:
+          X: =0
+          Y: =0
+          Width: =Parent.Width
+          Height: =90
+          Fill: =gblColHeaderBg
+
+    - 'Home_BHPLabel As label':
+        Properties:
+          Text: ="BHP"
+          X: =16
+          Y: =12
+          Width: =60
+          Height: =28
+          Color: =gblColBHPRed
+          FontWeight: =FontWeight.Bold
+          Size: =20
+          VerticalAlign: =VerticalAlign.Middle
+
+    - 'Home_AppTitle As label':
+        Properties:
+          Text: ="Enabling Task Manager"
+          X: =16
+          Y: =40
+          Width: =Parent.Width - 120
+          Height: =36
+          Color: =RGBA(255, 255, 255, 1)
+          FontWeight: =FontWeight.Bold
+          Size: =16
+          VerticalAlign: =VerticalAlign.Middle
+
+    - 'Home_DateLabel As label':
+        Properties:
+          Text: =Text(Today(), "[$-en-AU]dd mmm yyyy")
+          X: =Parent.Width - 130
+          Y: =12
+          Width: =114
+          Height: =28
+          Color: =RGBA(189, 189, 189, 1)
+          Size: =12
+          Align: =Align.Right
+          VerticalAlign: =VerticalAlign.Middle
+
+    # ── SITE SELECTOR ─────────────────────────────────────────────────────────
+    - 'Home_SiteSelector As gallery':
+        Properties:
+          Items: =["Saraji", "Caval Ridge"]
+          X: =16
+          Y: =100
+          Width: =Parent.Width - 32
+          Height: =44
+          TemplateSize: =(Parent.Width - 32) / 2
+          TemplatePadding: =4
+          Layout: =Layout.Horizontal
+          ShowScrollbar: =false
+          OnSelect: |
+            =Set(gblCurrentSite, ThisItem.Value);
+            ClearCollect(colDepartments, Filter(Departments, IsActive = true && Site = gblCurrentSite));
+            ClearCollect(colTodaysTasks,
+                Filter(EnabledTasks,
+                    Site = gblCurrentSite &&
+                    PlannedStartDate <= Today() &&
+                    PlannedEndDate   >= Today()
+                )
+            );
+            ClearCollect(colEquipmentMovements,
+                Filter(EquipmentMovements,
+                    Site = gblCurrentSite &&
+                    MovementStatus <> "Executed" &&
+                    MovementStatus <> "Cancelled"
+                )
+            )
+        Children:
+        - 'Home_SiteBtn_Rect As rectangle':
+            Properties:
+              X: =0
+              Y: =0
+              Width: =Parent.TemplateWidth - 8
+              Height: =36
+              Fill: =If(ThisItem.Value = gblCurrentSite, gblColBHPRed, gblColCardBg)
+              BorderColor: =If(ThisItem.Value = gblCurrentSite, gblColBHPRed, gblColBorder)
+              BorderThickness: =1
+              RadiusTopLeft: =6
+              RadiusTopRight: =6
+              RadiusBottomLeft: =6
+              RadiusBottomRight: =6
+        - 'Home_SiteBtn_Label As label':
+            Properties:
+              Text: =ThisItem.Value
+              X: =0
+              Y: =4
+              Width: =Parent.TemplateWidth - 8
+              Height: =28
+              Align: =Align.Center
+              Color: =If(ThisItem.Value = gblCurrentSite, RGBA(255,255,255,1), gblColTextPrimary)
+              FontWeight: =If(ThisItem.Value = gblCurrentSite, FontWeight.Bold, FontWeight.Normal)
+              Size: =13
+
+    # ── TODAY SUMMARY KPI CARDS ───────────────────────────────────────────────
+    - 'Home_Summary_Label As label':
+        Properties:
+          Text: ="Today's Enabling Tasks"
+          X: =16
+          Y: =158
+          Width: =Parent.Width - 32
+          Height: =28
+          Color: =gblColTextPrimary
+          FontWeight: =FontWeight.Bold
+          Size: =14
+          VerticalAlign: =VerticalAlign.Middle
+
+    # KPI Card — Total
+    - 'Home_KPI_Total_Rect As rectangle':
+        Properties:
+          X: =16
+          Y: =190
+          Width: =(Parent.Width - 48) / 3
+          Height: =72
+          Fill: =gblColCardBg
+          BorderColor: =gblColBorder
+          BorderThickness: =1
+          RadiusTopLeft: =8
+          RadiusTopRight: =8
+          RadiusBottomLeft: =8
+          RadiusBottomRight: =8
+    - 'Home_KPI_Total_Num As label':
+        Properties:
+          Text: =Text(CountRows(colTodaysTasks))
+          X: =16
+          Y: =198
+          Width: =(Parent.Width - 48) / 3
+          Height: =36
+          Align: =Align.Center
+          FontWeight: =FontWeight.Bold
+          Size: =26
+          Color: =gblColTextPrimary
+    - 'Home_KPI_Total_Lbl As label':
+        Properties:
+          Text: ="Total"
+          X: =16
+          Y: =234
+          Width: =(Parent.Width - 48) / 3
+          Height: =24
+          Align: =Align.Center
+          Size: =11
+          Color: =gblColTextSecond
+
+    # KPI Card — Complete
+    - 'Home_KPI_Done_Rect As rectangle':
+        Properties:
+          X: =24 + (Parent.Width - 48) / 3
+          Y: =190
+          Width: =(Parent.Width - 48) / 3
+          Height: =72
+          Fill: =gblColCardBg
+          BorderColor: =gblColBorder
+          BorderThickness: =1
+          RadiusTopLeft: =8
+          RadiusTopRight: =8
+          RadiusBottomLeft: =8
+          RadiusBottomRight: =8
+    - 'Home_KPI_Done_Bar As rectangle':
+        Properties:
+          X: =24 + (Parent.Width - 48) / 3
+          Y: =190
+          Width: =6
+          Height: =72
+          Fill: =gblColGreen
+          RadiusTopLeft: =8
+          RadiusBottomLeft: =8
+    - 'Home_KPI_Done_Num As label':
+        Properties:
+          Text: =Text(CountRows(Filter(colTodaysTasks, Status = "Complete")))
+          X: =30 + (Parent.Width - 48) / 3
+          Y: =198
+          Width: =(Parent.Width - 48) / 3 - 6
+          Height: =36
+          Align: =Align.Center
+          FontWeight: =FontWeight.Bold
+          Size: =26
+          Color: =gblColGreen
+    - 'Home_KPI_Done_Lbl As label':
+        Properties:
+          Text: ="Complete"
+          X: =30 + (Parent.Width - 48) / 3
+          Y: =234
+          Width: =(Parent.Width - 48) / 3 - 6
+          Height: =24
+          Align: =Align.Center
+          Size: =11
+          Color: =gblColTextSecond
+
+    # KPI Card — Overdue
+    - 'Home_KPI_Over_Rect As rectangle':
+        Properties:
+          X: =32 + 2 * (Parent.Width - 48) / 3
+          Y: =190
+          Width: =(Parent.Width - 48) / 3
+          Height: =72
+          Fill: =gblColCardBg
+          BorderColor: =gblColBorder
+          BorderThickness: =1
+          RadiusTopLeft: =8
+          RadiusTopRight: =8
+          RadiusBottomLeft: =8
+          RadiusBottomRight: =8
+    - 'Home_KPI_Over_Bar As rectangle':
+        Properties:
+          X: =32 + 2 * (Parent.Width - 48) / 3
+          Y: =190
+          Width: =6
+          Height: =72
+          Fill: =If(CountRows(Filter(colTodaysTasks, Status = "Delayed" || PlannedEndDate < Today())) > 0, gblColRed, gblColGreen)
+          RadiusTopLeft: =8
+          RadiusBottomLeft: =8
+    - 'Home_KPI_Over_Num As label':
+        Properties:
+          Text: =Text(CountRows(Filter(colTodaysTasks, Status = "Delayed" || (PlannedEndDate < Today() && Status <> "Complete"))))
+          X: =38 + 2 * (Parent.Width - 48) / 3
+          Y: =198
+          Width: =(Parent.Width - 48) / 3 - 6
+          Height: =36
+          Align: =Align.Center
+          FontWeight: =FontWeight.Bold
+          Size: =26
+          Color: =If(CountRows(Filter(colTodaysTasks, Status = "Delayed" || PlannedEndDate < Today())) > 0, gblColRed, gblColGreen)
+    - 'Home_KPI_Over_Lbl As label':
+        Properties:
+          Text: ="Overdue"
+          X: =38 + 2 * (Parent.Width - 48) / 3
+          Y: =234
+          Width: =(Parent.Width - 48) / 3 - 6
+          Height: =24
+          Align: =Align.Center
+          Size: =11
+          Color: =gblColTextSecond
+
+    # ── DEPARTMENT STATUS CARDS ───────────────────────────────────────────────
+    - 'Home_Dept_Label As label':
+        Properties:
+          Text: ="Department Status"
+          X: =16
+          Y: =278
+          Width: =Parent.Width - 32
+          Height: =28
+          Color: =gblColTextPrimary
+          FontWeight: =FontWeight.Bold
+          Size: =14
+          VerticalAlign: =VerticalAlign.Middle
+
+    - 'Home_Dept_Gallery As gallery':
+        Properties:
+          Items: =Sort(colDepartments, Title, SortOrder.Ascending)
+          X: =0
+          Y: =308
+          Width: =Parent.Width
+          Height: =Parent.Height - 390
+          TemplateSize: =100
+          TemplatePadding: =0
+          ShowScrollbar: =false
+          Layout: =Layout.Vertical
+          OnSelect: |
+            =Set(gblFilterDept, ThisItem.Title);
+            Navigate(TaskListScreen, ScreenTransition.Fade)
+        Children:
+        - 'Home_Dept_Card_Rect As rectangle':
+            Properties:
+              X: =16
+              Y: =8
+              Width: =Parent.TemplateWidth - 32
+              Height: =84
+              Fill: =gblColCardBg
+              BorderColor: =gblColBorder
+              BorderThickness: =1
+              RadiusTopLeft: =10
+              RadiusTopRight: =10
+              RadiusBottomLeft: =10
+              RadiusBottomRight: =10
+        - 'Home_Dept_Color_Bar As rectangle':
+            Properties:
+              X: =16
+              Y: =8
+              Width: =6
+              Height: =84
+              Fill: =ColorValue(ThisItem.DepartmentColor)
+              RadiusTopLeft: =10
+              RadiusBottomLeft: =10
+        - 'Home_Dept_Name As label':
+            Properties:
+              Text: =ThisItem.Title
+              X: =30
+              Y: =16
+              Width: =Parent.TemplateWidth - 180
+              Height: =28
+              Color: =gblColTextPrimary
+              FontWeight: =FontWeight.Bold
+              Size: =13
+              VerticalAlign: =VerticalAlign.Middle
+        - 'Home_Dept_TaskCount As label':
+            Properties:
+              Text: =Text(CountRows(Filter(colTodaysTasks, Department = ThisItem.Title))) & " tasks today"
+              X: =30
+              Y: =46
+              Width: =Parent.TemplateWidth - 180
+              Height: =24
+              Color: =gblColTextSecond
+              Size: =12
+        - 'Home_Dept_Progress_Bg As rectangle':
+            Properties:
+              X: =30
+              Y: =76
+              Width: =Parent.TemplateWidth - 180
+              Height: =6
+              Fill: =gblColBorder
+              RadiusTopLeft: =3
+              RadiusTopRight: =3
+              RadiusBottomLeft: =3
+              RadiusBottomRight: =3
+        - 'Home_Dept_Progress_Fill As rectangle':
+            Properties:
+              X: =30
+              Y: =76
+              Width: |
+                =If(
+                    CountRows(Filter(colTodaysTasks, Department = ThisItem.Title)) = 0,
+                    0,
+                    (Parent.TemplateWidth - 180) *
+                    CountRows(Filter(colTodaysTasks, Department = ThisItem.Title && Status = "Complete")) /
+                    CountRows(Filter(colTodaysTasks, Department = ThisItem.Title))
+                )
+              Height: =6
+              Fill: |
+                =If(
+                    CountRows(Filter(colTodaysTasks, Department = ThisItem.Title && (Status = "Delayed" || PlannedEndDate < Today()))) > 0,
+                    gblColRed,
+                    If(
+                        CountRows(Filter(colTodaysTasks, Department = ThisItem.Title && Status = "Complete")) =
+                        CountRows(Filter(colTodaysTasks, Department = ThisItem.Title)),
+                        gblColGreen,
+                        gblColAmber
+                    )
+                )
+              RadiusTopLeft: =3
+              RadiusTopRight: =3
+              RadiusBottomLeft: =3
+              RadiusBottomRight: =3
+        - 'Home_Dept_PctLabel As label':
+            Properties:
+              Text: |
+                =If(
+                    CountRows(Filter(colTodaysTasks, Department = ThisItem.Title)) = 0,
+                    "No tasks",
+                    Text(
+                        Round(
+                            CountRows(Filter(colTodaysTasks, Department = ThisItem.Title && Status = "Complete")) /
+                            CountRows(Filter(colTodaysTasks, Department = ThisItem.Title)) * 100,
+                            0
+                        )
+                    ) & "% done"
+                )
+              X: =Parent.TemplateWidth - 148
+              Y: =20
+              Width: =116
+              Height: =30
+              Align: =Align.Right
+              FontWeight: =FontWeight.Bold
+              Size: =20
+              Color: |
+                =If(
+                    CountRows(Filter(colTodaysTasks, Department = ThisItem.Title && (Status = "Delayed" || PlannedEndDate < Today()))) > 0,
+                    gblColRed,
+                    If(
+                        CountRows(Filter(colTodaysTasks, Department = ThisItem.Title && Status = "Complete")) =
+                        CountRows(Filter(colTodaysTasks, Department = ThisItem.Title)),
+                        gblColGreen,
+                        gblColAmber
+                    )
+                )
+        - 'Home_Dept_OverdueChip As rectangle':
+            Properties:
+              X: =Parent.TemplateWidth - 148
+              Y: =54
+              Width: =116
+              Height: =22
+              Fill: |
+                =If(
+                    CountRows(Filter(colTodaysTasks, Department = ThisItem.Title && (Status = "Delayed" || (PlannedEndDate < Today() && Status <> "Complete")))) > 0,
+                    gblColRed,
+                    RGBA(0,0,0,0)
+                )
+              RadiusTopLeft: =11
+              RadiusTopRight: =11
+              RadiusBottomLeft: =11
+              RadiusBottomRight: =11
+        - 'Home_Dept_OverdueLabel As label':
+            Properties:
+              Text: |
+                =If(
+                    CountRows(Filter(colTodaysTasks, Department = ThisItem.Title && (Status = "Delayed" || (PlannedEndDate < Today() && Status <> "Complete")))) > 0,
+                    Text(CountRows(Filter(colTodaysTasks, Department = ThisItem.Title && (Status = "Delayed" || (PlannedEndDate < Today() && Status <> "Complete"))))) & " overdue",
+                    ""
+                )
+              X: =Parent.TemplateWidth - 148
+              Y: =54
+              Width: =116
+              Height: =22
+              Align: =Align.Center
+              Color: =RGBA(255, 255, 255, 1)
+              Size: =11
+              FontWeight: =FontWeight.Bold
+
+    # ── UPCOMING EQUIPMENT MOVEMENTS STRIP ────────────────────────────────────
+    - 'Home_Equip_Label As label':
+        Properties:
+          Text: ="Upcoming Equipment Moves (next 14 days)"
+          X: =16
+          Y: =Parent.Height - 158
+          Width: =Parent.Width - 32
+          Height: =24
+          Color: =gblColTextPrimary
+          FontWeight: =FontWeight.Bold
+          Size: =12
+
+    - 'Home_Equip_Gallery As gallery':
+        Properties:
+          Items: =SortByColumns(Filter(colEquipmentMovements, PlannedMoveDate <= DateAdd(Today(), 14, Days) && PlannedMoveDate >= Today()), "PlannedMoveDate", SortOrder.Ascending)
+          X: =0
+          Y: =Parent.Height - 134
+          Width: =Parent.Width
+          Height: =80
+          TemplateSize: =200
+          TemplatePadding: =8
+          Layout: =Layout.Horizontal
+          ShowScrollbar: =false
+        Children:
+        - 'Home_Equip_Card_Rect As rectangle':
+            Properties:
+              X: =0
+              Y: =0
+              Width: =192
+              Height: =72
+              Fill: =gblColCardBg
+              BorderColor: =gblColBorder
+              BorderThickness: =1
+              RadiusTopLeft: =8
+              RadiusTopRight: =8
+              RadiusBottomLeft: =8
+              RadiusBottomRight: =8
+        - 'Home_Equip_DaysLabel As label':
+            Properties:
+              Text: =Text(DateDiff(Today(), ThisItem.PlannedMoveDate, Days)) & "d"
+              X: =8
+              Y: =8
+              Width: =44
+              Height: =44
+              Align: =Align.Center
+              FontWeight: =FontWeight.Bold
+              Size: =20
+              Color: =If(DateDiff(Today(), ThisItem.PlannedMoveDate, Days) <= 3, gblColRed, If(DateDiff(Today(), ThisItem.PlannedMoveDate, Days) <= 7, gblColAmber, gblColBlue))
+        - 'Home_Equip_Title As label':
+            Properties:
+              Text: =ThisItem.EquipmentID & " — " & ThisItem.Title
+              X: =56
+              Y: =8
+              Width: =128
+              Height: =36
+              Size: =11
+              Color: =gblColTextPrimary
+              FontWeight: =FontWeight.Semibold
+              Overflow: =Overflow.Hidden
+        - 'Home_Equip_Date As label':
+            Properties:
+              Text: =Text(ThisItem.PlannedMoveDate, "[$-en-AU]dd mmm")
+              X: =56
+              Y: =46
+              Width: =128
+              Height: =20
+              Size: =11
+              Color: =gblColTextSecond
+
+    # ── BOTTOM NAVIGATION ─────────────────────────────────────────────────────
+    - 'Home_NavBar As rectangle':
+        Properties:
+          X: =0
+          Y: =Parent.Height - 56
+          Width: =Parent.Width
+          Height: =56
+          Fill: =gblColNavBg
+
+    - 'Home_Nav_Home_Rect As rectangle':
+        Properties:
+          X: =0
+          Y: =Parent.Height - 56
+          Width: =Parent.Width / 4
+          Height: =56
+          Fill: =RGBA(0,0,0,0)
+          OnSelect: =Navigate(HomeScreen, ScreenTransition.None)
+    - 'Home_Nav_Home_Label As label':
+        Properties:
+          Text: ="Home"
+          X: =0
+          Y: =Parent.Height - 22
+          Width: =Parent.Width / 4
+          Height: =20
+          Align: =Align.Center
+          Size: =10
+          Color: =gblColNavActive
+
+    - 'Home_Nav_Tasks_Rect As rectangle':
+        Properties:
+          X: =Parent.Width / 4
+          Y: =Parent.Height - 56
+          Width: =Parent.Width / 4
+          Height: =56
+          Fill: =RGBA(0,0,0,0)
+          OnSelect: |
+            =Set(gblFilterDept, "All");
+            Navigate(TaskListScreen, ScreenTransition.None)
+    - 'Home_Nav_Tasks_Label As label':
+        Properties:
+          Text: ="All Tasks"
+          X: =Parent.Width / 4
+          Y: =Parent.Height - 22
+          Width: =Parent.Width / 4
+          Height: =20
+          Align: =Align.Center
+          Size: =10
+          Color: =gblColNavInactive
+
+    - 'Home_Nav_Add_Rect As rectangle':
+        Properties:
+          X: =Parent.Width / 2
+          Y: =Parent.Height - 56
+          Width: =Parent.Width / 4
+          Height: =56
+          Fill: =RGBA(0,0,0,0)
+          OnSelect: =Navigate(AddTaskScreen, ScreenTransition.None)
+    - 'Home_Nav_Add_Label As label':
+        Properties:
+          Text: ="Add Task"
+          X: =Parent.Width / 2
+          Y: =Parent.Height - 22
+          Width: =Parent.Width / 4
+          Height: =20
+          Align: =Align.Center
+          Size: =10
+          Color: =gblColNavInactive
+
+    - 'Home_Nav_PDCA_Rect As rectangle':
+        Properties:
+          X: =3 * Parent.Width / 4
+          Y: =Parent.Height - 56
+          Width: =Parent.Width / 4
+          Height: =56
+          Fill: =RGBA(0,0,0,0)
+          OnSelect: =Navigate(PDCAScreen, ScreenTransition.None)
+    - 'Home_Nav_PDCA_Label As label':
+        Properties:
+          Text: ="PDCA"
+          X: =3 * Parent.Width / 4
+          Y: =Parent.Height - 22
+          Width: =Parent.Width / 4
+          Height: =20
+          Align: =Align.Center
+          Size: =10
+          Color: =gblColNavInactive

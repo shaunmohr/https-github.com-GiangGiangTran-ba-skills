@@ -1,0 +1,444 @@
+- 'CompleteTaskScreen As screen':
+    Properties:
+      Fill: =gblColPageBg
+      OnVisible: |
+        =// Initialise local state for this form
+        UpdateContext({
+            locCompletionStatus: gblSelectedTask.Status,
+            locActualStart:      If(!IsBlank(gblSelectedTask.ActualStartDate), gblSelectedTask.ActualStartDate, Today()),
+            locActualEnd:        If(!IsBlank(gblSelectedTask.ActualEndDate), gblSelectedTask.ActualEndDate, Today()),
+            locDelayReasonId:    gblSelectedTask.DelayReasonId,
+            locDelayNotes:       gblSelectedTask.DelayNotes,
+            locSubmitting:       false,
+            locSubmitError:      "",
+            locShowUnplanned:    false
+        })
+    Children:
+
+    # ── HEADER ────────────────────────────────────────────────────────────────
+    - 'CT_Header_Rect As rectangle':
+        Properties:
+          X: =0
+          Y: =0
+          Width: =Parent.Width
+          Height: =90
+          Fill: =gblColHeaderBg
+
+    - 'CT_Cancel_Btn As button':
+        Properties:
+          Text: ="Cancel"
+          X: =8
+          Y: =30
+          Width: =70
+          Height: =36
+          Color: =RGBA(189, 189, 189, 1)
+          Fill: =RGBA(0, 0, 0, 0)
+          BorderColor: =RGBA(0, 0, 0, 0)
+          Size: =13
+          OnSelect: =Navigate(TaskDetailScreen, ScreenTransition.UnCover)
+
+    - 'CT_Title As label':
+        Properties:
+          Text: ="Update Task"
+          X: =70
+          Y: =30
+          Width: =Parent.Width - 80
+          Height: =36
+          Color: =RGBA(255, 255, 255, 1)
+          FontWeight: =FontWeight.Bold
+          Size: =16
+          VerticalAlign: =VerticalAlign.Middle
+
+    # ── TASK CONTEXT ─────────────────────────────────────────────────────────
+    - 'CT_TaskName As label':
+        Properties:
+          Text: =gblSelectedTask.Title
+          X: =16
+          Y: =100
+          Width: =Parent.Width - 32
+          Height: =36
+          Color: =gblColTextPrimary
+          FontWeight: =FontWeight.Bold
+          Size: =15
+
+    - 'CT_TaskMeta As label':
+        Properties:
+          Text: =gblSelectedTask.Department & "  ·  " & gblSelectedTask.Site & "  ·  Due: " & Text(gblSelectedTask.PlannedEndDate, "[$-en-AU]dd mmm")
+          X: =16
+          Y: =136
+          Width: =Parent.Width - 32
+          Height: =22
+          Color: =gblColTextSecond
+          Size: =12
+
+    # Divider
+    - 'CT_Div1 As rectangle':
+        Properties:
+          X: =16
+          Y: =164
+          Width: =Parent.Width - 32
+          Height: =1
+          Fill: =gblColBorder
+
+    # ── STATUS SELECTION ─────────────────────────────────────────────────────
+    - 'CT_Status_Label As label':
+        Properties:
+          Text: ="Task Status *"
+          X: =16
+          Y: =174
+          Width: =Parent.Width - 32
+          Height: =22
+          Color: =gblColTextSecond
+          FontWeight: =FontWeight.Semibold
+          Size: =12
+
+    - 'CT_Status_Gallery As gallery':
+        Properties:
+          Items: =["Complete", "In Progress", "Delayed", "Partially Complete", "Not Started"]
+          X: =8
+          Y: =196
+          Width: =Parent.Width - 16
+          Height: =48
+          TemplateSize: =(Parent.Width - 16) / 3
+          TemplatePadding: =4
+          Layout: =Layout.Horizontal
+          ShowScrollbar: =false
+          OnSelect: =UpdateContext({locCompletionStatus: ThisItem.Value})
+        Children:
+        - 'CT_Status_Btn_Rect As rectangle':
+            Properties:
+              X: =0
+              Y: =0
+              Width: =Parent.TemplateWidth - 8
+              Height: =40
+              Fill: |
+                =If(ThisItem.Value = locCompletionStatus,
+                    Switch(ThisItem.Value,
+                        "Complete",           gblColGreen,
+                        "Delayed",            gblColRed,
+                        "Partially Complete", gblColAmber,
+                        gblColBlue
+                    ),
+                    gblColCardBg
+                )
+              BorderColor: |
+                =Switch(ThisItem.Value,
+                    "Complete",           gblColGreen,
+                    "Delayed",            gblColRed,
+                    "Partially Complete", gblColAmber,
+                    gblColBlue
+                )
+              BorderThickness: =1
+              RadiusTopLeft: =6
+              RadiusTopRight: =6
+              RadiusBottomLeft: =6
+              RadiusBottomRight: =6
+        - 'CT_Status_Btn_Label As label':
+            Properties:
+              Text: =ThisItem.Value
+              X: =0
+              Y: =8
+              Width: =Parent.TemplateWidth - 8
+              Height: =24
+              Align: =Align.Center
+              Size: =11
+              FontWeight: =If(ThisItem.Value = locCompletionStatus, FontWeight.Bold, FontWeight.Normal)
+              Color: |
+                =If(ThisItem.Value = locCompletionStatus,
+                    RGBA(255, 255, 255, 1),
+                    Switch(ThisItem.Value,
+                        "Complete",           gblColGreen,
+                        "Delayed",            gblColRed,
+                        "Partially Complete", gblColAmber,
+                        gblColBlue
+                    )
+                )
+
+    # ── ACTUAL DATES ─────────────────────────────────────────────────────────
+    - 'CT_Dates_Label As label':
+        Properties:
+          Text: ="Actual Dates"
+          X: =16
+          Y: =254
+          Width: =Parent.Width - 32
+          Height: =22
+          Color: =gblColTextSecond
+          FontWeight: =FontWeight.Semibold
+          Size: =12
+
+    - 'CT_ActStart_Label As label':
+        Properties:
+          Text: ="Actual Start"
+          X: =16
+          Y: =278
+          Width: =(Parent.Width - 40) / 2
+          Height: =20
+          Color: =gblColTextSecond
+          Size: =11
+
+    - 'CT_ActEnd_Label As label':
+        Properties:
+          Text: =If(locCompletionStatus = "Complete" || locCompletionStatus = "Partially Complete", "Actual End *", "Actual End")
+          X: =24 + (Parent.Width - 40) / 2
+          Y: =278
+          Width: =(Parent.Width - 40) / 2
+          Height: =20
+          Color: =gblColTextSecond
+          Size: =11
+
+    - 'CT_ActStart_Picker As datepicker':
+        Properties:
+          X: =16
+          Y: =298
+          Width: =(Parent.Width - 40) / 2
+          Height: =36
+          DefaultDate: =locActualStart
+          Format: =DateTimeFormat.ShortDate
+          OnChange: =UpdateContext({locActualStart: CT_ActStart_Picker.SelectedDate})
+
+    - 'CT_ActEnd_Picker As datepicker':
+        Properties:
+          X: =24 + (Parent.Width - 40) / 2
+          Y: =298
+          Width: =(Parent.Width - 40) / 2
+          Height: =36
+          DefaultDate: =locActualEnd
+          Format: =DateTimeFormat.ShortDate
+          OnChange: =UpdateContext({locActualEnd: CT_ActEnd_Picker.SelectedDate})
+
+    # ── DELAY REASON (visible when status = Delayed or Partially Complete) ────
+    - 'CT_Delay_Section As rectangle':
+        Properties:
+          X: =0
+          Y: =346
+          Width: =Parent.Width
+          Height: =If(locCompletionStatus = "Delayed" || locCompletionStatus = "Partially Complete", 156, 0)
+          Fill: =RGBA(0, 0, 0, 0)
+          Visible: =locCompletionStatus = "Delayed" || locCompletionStatus = "Partially Complete"
+
+    - 'CT_Delay_Banner As rectangle':
+        Properties:
+          X: =16
+          Y: =350
+          Width: =Parent.Width - 32
+          Height: =2
+          Fill: =gblColRed
+          Visible: =locCompletionStatus = "Delayed" || locCompletionStatus = "Partially Complete"
+
+    - 'CT_Delay_Label As label':
+        Properties:
+          Text: ="Delay Reason *"
+          X: =16
+          Y: =360
+          Width: =Parent.Width - 32
+          Height: =22
+          Color: =gblColRed
+          FontWeight: =FontWeight.Semibold
+          Size: =12
+          Visible: =locCompletionStatus = "Delayed" || locCompletionStatus = "Partially Complete"
+
+    - 'CT_Delay_Picker As combobox':
+        Properties:
+          Items: =Filter(colDelayReasons, IsActive = true)
+          X: =16
+          Y: =382
+          Width: =Parent.Width - 32
+          Height: =36
+          InputTextPlaceholder: ="Select delay reason..."
+          DisplayFields: =["Title"]
+          SearchFields: =["Title", "Category"]
+          DefaultSelectedItems: =Filter(colDelayReasons, ID = locDelayReasonId)
+          Visible: =locCompletionStatus = "Delayed" || locCompletionStatus = "Partially Complete"
+          OnChange: =UpdateContext({locDelayReasonId: CT_Delay_Picker.Selected.ID})
+
+    - 'CT_Delay_Cat As label':
+        Properties:
+          Text: =If(!IsBlank(CT_Delay_Picker.Selected), "Category: " & CT_Delay_Picker.Selected.Category, "")
+          X: =16
+          Y: =422
+          Width: =Parent.Width - 32
+          Height: =20
+          Color: =gblColTextSecond
+          Size: =11
+          Visible: =locCompletionStatus = "Delayed" || locCompletionStatus = "Partially Complete"
+
+    - 'CT_Delay_Notes_Label As label':
+        Properties:
+          Text: ="Notes (optional — add context for PDCA)"
+          X: =16
+          Y: =446
+          Width: =Parent.Width - 32
+          Height: =20
+          Color: =gblColTextSecond
+          Size: =11
+          Visible: =locCompletionStatus = "Delayed" || locCompletionStatus = "Partially Complete"
+
+    - 'CT_Delay_Notes_Input As text':
+        Properties:
+          X: =16
+          Y: =466
+          Width: =Parent.Width - 32
+          Height: =56
+          HintText: ="e.g. Pump crew was redeployed to Pit 7 emergency dewater — super decision at 0800"
+          Mode: =TextMode.MultiLine
+          Default: =locDelayNotes
+          Visible: =locCompletionStatus = "Delayed" || locCompletionStatus = "Partially Complete"
+          OnChange: =UpdateContext({locDelayNotes: CT_Delay_Notes_Input.Text})
+
+    # ── UNPLANNED TASKS SECTION ───────────────────────────────────────────────
+    - 'CT_Unplanned_Toggle As toggle':
+        Properties:
+          X: =16
+          Y: =If(locCompletionStatus = "Delayed" || locCompletionStatus = "Partially Complete", 534, 356)
+          Width: =Parent.Width - 32
+          Height: =36
+          Default: =locShowUnplanned
+          TrueText: ="Recording unplanned tasks"
+          FalseText: ="Any unplanned enabling tasks completed this shift?"
+          OnCheck: =UpdateContext({locShowUnplanned: true})
+          OnUncheck: =UpdateContext({locShowUnplanned: false})
+
+    - 'CT_Unplanned_Note As label':
+        Properties:
+          Text: ="Unplanned tasks are recorded and feed directly into the PDCA analysis. These are tasks completed that were not on the schedule."
+          X: =16
+          Y: =If(locCompletionStatus = "Delayed" || locCompletionStatus = "Partially Complete", 572, 394)
+          Width: =Parent.Width - 32
+          Height: =44
+          Color: =gblColTextSecond
+          Size: =11
+          Visible: =locShowUnplanned
+
+    - 'CT_Unplanned_Type_Label As label':
+        Properties:
+          Text: ="Unplanned Task Type"
+          X: =16
+          Y: =If(locCompletionStatus = "Delayed" || locCompletionStatus = "Partially Complete", 618, 440)
+          Width: =Parent.Width - 32
+          Height: =20
+          Color: =gblColTextSecond
+          Size: =11
+          Visible: =locShowUnplanned
+
+    - 'CT_Unplanned_Type As combobox':
+        Properties:
+          Items: =Filter(colTaskTypes, IsActive = true)
+          X: =16
+          Y: =If(locCompletionStatus = "Delayed" || locCompletionStatus = "Partially Complete", 638, 460)
+          Width: =Parent.Width - 32
+          Height: =36
+          InputTextPlaceholder: ="Select task type..."
+          DisplayFields: =["Title"]
+          SearchFields: =["Title", "Category"]
+          Visible: =locShowUnplanned
+
+    # ── ERROR MESSAGE ─────────────────────────────────────────────────────────
+    - 'CT_Error_Label As label':
+        Properties:
+          Text: =locSubmitError
+          X: =16
+          Y: =Parent.Height - 168
+          Width: =Parent.Width - 32
+          Height: =If(IsBlank(locSubmitError), 0, 40)
+          Color: =gblColRed
+          Size: =12
+          FontWeight: =FontWeight.Semibold
+          Visible: =!IsBlank(locSubmitError)
+
+    # ── SUBMIT BUTTON ─────────────────────────────────────────────────────────
+    - 'CT_Submit_Btn As button':
+        Properties:
+          Text: =If(locSubmitting, "Saving...", "Save Update")
+          X: =16
+          Y: =Parent.Height - 116
+          Width: =Parent.Width - 32
+          Height: =52
+          Fill: =If(locSubmitting, ColorFade(gblColBHPRed, 0.4), gblColBHPRed)
+          Color: =RGBA(255, 255, 255, 1)
+          BorderColor: =RGBA(0, 0, 0, 0)
+          FontWeight: =FontWeight.Bold
+          Size: =16
+          RadiusTopLeft: =8
+          RadiusTopRight: =8
+          RadiusBottomLeft: =8
+          RadiusBottomRight: =8
+          DisplayMode: =If(locSubmitting, DisplayMode.Disabled, DisplayMode.Edit)
+          OnSelect: |
+            =// ── Validation ──────────────────────────────────────────────────
+            If(
+                IsBlank(locCompletionStatus),
+                UpdateContext({locSubmitError: "Please select a task status before saving."}),
+                If(
+                    (locCompletionStatus = "Delayed" || locCompletionStatus = "Partially Complete") && IsBlank(locDelayReasonId),
+                    UpdateContext({locSubmitError: "A delay reason is required when status is Delayed or Partially Complete."}),
+                    If(
+                        (locCompletionStatus = "Complete" || locCompletionStatus = "Partially Complete") && IsBlank(CT_ActEnd_Picker.SelectedDate),
+                        UpdateContext({locSubmitError: "An actual end date is required when marking a task complete."}),
+                        // ── All valid — submit ─────────────────────────────────────
+                        UpdateContext({locSubmitting: true, locSubmitError: ""});
+
+                        // Patch the main task record
+                        Patch(EnabledTasks,
+                            LookUp(EnabledTasks, ID = gblSelectedTask.ID),
+                            {
+                                Status:          locCompletionStatus,
+                                ActualStartDate: locActualStart,
+                                ActualEndDate:   If(locCompletionStatus = "Complete" || locCompletionStatus = "Partially Complete", locActualEnd, Blank()),
+                                DelayReasonId:   If(locCompletionStatus = "Delayed" || locCompletionStatus = "Partially Complete", locDelayReasonId, Blank()),
+                                DelayNotes:      If(locCompletionStatus = "Delayed" || locCompletionStatus = "Partially Complete", CT_Delay_Notes_Input.Text, Blank()),
+                                SupervisorEmail: {Email: gblCurrentUser.Email, DisplayName: gblCurrentUser.FullName}
+                            }
+                        );
+
+                        // If an unplanned task was logged, create a new EnabledTasks record
+                        If(
+                            locShowUnplanned && !IsBlank(CT_Unplanned_Type.Selected),
+                            Patch(EnabledTasks,
+                                Defaults(EnabledTasks),
+                                {
+                                    Title:              "Unplanned: " & CT_Unplanned_Type.Selected.Title,
+                                    TaskTypeId:         CT_Unplanned_Type.Selected.ID,
+                                    Department:         gblSelectedTask.Department,
+                                    Site:               gblSelectedTask.Site,
+                                    Status:             "Complete",
+                                    PlannedStartDate:   Today(),
+                                    PlannedEndDate:     Today(),
+                                    PlannedDurationDays: 0,
+                                    ActualStartDate:    Today(),
+                                    ActualEndDate:      Today(),
+                                    IsUnplanned:        true,
+                                    SupervisorEmail:    {Email: gblCurrentUser.Email, DisplayName: gblCurrentUser.FullName}
+                                }
+                            )
+                        );
+
+                        // Refresh today's tasks cache
+                        ClearCollect(colTodaysTasks,
+                            Filter(EnabledTasks,
+                                Site = gblCurrentSite &&
+                                PlannedStartDate <= Today() &&
+                                PlannedEndDate   >= Today()
+                            )
+                        );
+
+                        UpdateContext({locSubmitting: false});
+
+                        // Navigate back to task detail with success
+                        Set(gblSelectedTask, LookUp(EnabledTasks, ID = gblSelectedTask.ID));
+                        Navigate(TaskDetailScreen, ScreenTransition.UnCover)
+                    )
+                )
+            )
+
+    - 'CT_Cancel_Bottom_Btn As button':
+        Properties:
+          Text: ="Cancel"
+          X: =16
+          Y: =Parent.Height - 58
+          Width: =Parent.Width - 32
+          Height: =36
+          Fill: =gblColPageBg
+          Color: =gblColTextSecond
+          BorderColor: =RGBA(0, 0, 0, 0)
+          Size: =13
+          OnSelect: =Navigate(TaskDetailScreen, ScreenTransition.UnCover)

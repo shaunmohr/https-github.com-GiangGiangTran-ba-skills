@@ -1,0 +1,15 @@
+{
+  "Type": "SharePoint",
+  "Name": "EquipmentMovements",
+  "DisplayName": "Equipment Movements",
+  "DataSourceDefinition": {
+    "SharePointSiteUrl": "https://bhp.sharepoint.com/sites/BMAEnablingTasks",
+    "ListName": "EquipmentMovements",
+    "KeyColumns": ["ID"],
+    "ColumnsToRetrieve": [
+      "ID", "Title", "Site", "EquipmentType", "EquipmentID",
+      "PlannedMoveDate", "FromLocation", "ToLocation",
+      "PitBlock", "MovementStatus", "SpryReference"
+    ]
+  }
+}

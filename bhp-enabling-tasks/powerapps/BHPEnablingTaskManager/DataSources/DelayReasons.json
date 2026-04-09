@@ -1,0 +1,11 @@
+{
+  "Type": "SharePoint",
+  "Name": "DelayReasons",
+  "DisplayName": "Delay Reasons",
+  "DataSourceDefinition": {
+    "SharePointSiteUrl": "https://bhp.sharepoint.com/sites/BMAEnablingTasks",
+    "ListName": "DelayReasons",
+    "KeyColumns": ["ID"],
+    "ColumnsToRetrieve": ["ID", "Title", "Category", "Description", "IsControllable", "IsActive"]
+  }
+}

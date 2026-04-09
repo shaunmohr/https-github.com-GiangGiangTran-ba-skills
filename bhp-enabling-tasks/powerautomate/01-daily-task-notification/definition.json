@@ -1,0 +1,159 @@
+{
+  "name": "BMA_Enabling_Tasks_Daily_Notification",
+  "description": "Runs at 05:30 AEST every day. Queries each site's EnabledTasks list for tasks due today and posts a structured daily task summary to each department's Microsoft Teams channel. Includes critical path flags and equipment movement countdowns.",
+  "trigger": {
+    "type": "Recurrence",
+    "recurrence": {
+      "frequency": "Day",
+      "interval": 1,
+      "schedule": {
+        "hours": ["5"],
+        "minutes": ["30"]
+      },
+      "timeZone": "E. Australia Standard Time",
+      "startTime": "2024-01-01T05:30:00"
+    }
+  },
+  "actions": {
+    "Initialize_Sites": {
+      "type": "InitializeVariable",
+      "order": 1,
+      "inputs": {
+        "variables": [{
+          "name": "Sites",
+          "type": "array",
+          "value": ["Saraji", "Caval Ridge"]
+        }]
+      }
+    },
+    "Loop_Sites": {
+      "type": "Foreach",
+      "order": 2,
+      "foreach": "@variables('Sites')",
+      "actions": {
+        "Get_Todays_Tasks": {
+          "type": "ApiConnection",
+          "order": 1,
+          "description": "Get all enabling tasks planned for today or already in progress and overdue",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetItems",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+            },
+            "parameters": {
+              "dataset": "https://bhp.sharepoint.com/sites/BMAEnablingTasks",
+              "table": "EnabledTasks",
+              "$filter": "Site eq '@{items('Loop_Sites')}' and Status ne 'Complete' and Status ne 'Cancelled' and PlannedEndDate ge '@{formatDateTime(utcNow(), 'yyyy-MM-dd')}'",
+              "$orderby": "IsOnCriticalPath desc, PlannedEndDate asc",
+              "$top": 50
+            }
+          }
+        },
+        "Get_Site_Departments": {
+          "type": "ApiConnection",
+          "order": 2,
+          "inputs": {
+            "host": {
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetItems",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+            },
+            "parameters": {
+              "dataset": "https://bhp.sharepoint.com/sites/BMAEnablingTasks",
+              "table": "Departments",
+              "$filter": "Site eq '@{items('Loop_Sites')}' and IsActive eq 1"
+            }
+          }
+        },
+        "Loop_Departments": {
+          "type": "Foreach",
+          "order": 3,
+          "foreach": "@body('Get_Site_Departments')?['value']",
+          "actions": {
+            "Filter_Dept_Tasks": {
+              "type": "Query",
+              "order": 1,
+              "description": "Filter the site's tasks to just this department",
+              "inputs": {
+                "from": "@body('Get_Todays_Tasks')?['value']",
+                "where": "@equals(item()?['Department'], items('Loop_Departments')?['Title'])"
+              }
+            },
+            "Condition_Has_Tasks": {
+              "type": "If",
+              "order": 2,
+              "expression": {
+                "greater": ["@length(body('Filter_Dept_Tasks'))", 0]
+              },
+              "actions": {
+                "Build_Task_Rows": {
+                  "type": "Select",
+                  "order": 1,
+                  "description": "Build a formatted row for each task in this department",
+                  "inputs": {
+                    "from": "@body('Filter_Dept_Tasks')",
+                    "select": {
+                      "row": "@{if(equals(item()?['IsOnCriticalPath'], true), '🔴 **CRITICAL PATH** ', '')}**@{item()?['Title']}**\n> Type: @{item()?['TaskTypeId']?.Title}  |  Due: @{formatDateTime(item()?['PlannedEndDate'], 'dd MMM')}  |  Status: @{item()?['Status']}@{if(and(not(empty(item()?['DelayReasonId']?.Title)), not(equals(item()?['Status'], 'Complete'))), concat(' ⚠ ', item()?['DelayReasonId']?.Title), '')}"
+                    }
+                  }
+                },
+                "Join_Rows": {
+                  "type": "Join",
+                  "order": 2,
+                  "inputs": {
+                    "from": "@body('Build_Task_Rows')",
+                    "joinWith": "\n\n"
+                  }
+                },
+                "Count_Overdue": {
+                  "type": "Query",
+                  "order": 3,
+                  "inputs": {
+                    "from": "@body('Filter_Dept_Tasks')",
+                    "where": "@and(not(equals(item()?['Status'], 'Complete')), less(item()?['PlannedEndDate'], formatDateTime(utcNow(), 'yyyy-MM-dd')))"
+                  }
+                },
+                "Post_To_Teams": {
+                  "type": "ApiConnection",
+                  "order": 4,
+                  "description": "Post the daily task summary to the department's Teams channel",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_teams",
+                      "operationId": "PostMessageToConversation",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams"
+                    },
+                    "parameters": {
+                      "poster": "Flow bot",
+                      "location": "Channel",
+                      "body/recipient/groupId": "@{items('Loop_Departments')?['TeamsGroupId']}",
+                      "body/recipient/channelId": "@{items('Loop_Departments')?['TeamsChannelId']}",
+                      "body/messageBody": "## 📋 Enabling Tasks — @{items('Loop_Departments')?['Title']} | @{formatDateTime(utcNow(), 'dd MMM yyyy')} | @{items('Loop_Sites')}\n\n**@{length(body('Filter_Dept_Tasks'))} tasks active** @{if(greater(length(body('Count_Overdue')), 0), concat('| 🔴 ', length(body('Count_Overdue')), ' OVERDUE'), '| ✅ All on track')}\n\n---\n\n@{body('Join_Rows')}\n\n---\n*Open the BHP Enabling Task Manager app to mark completions.*"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "connections": {
+    "shared_sharepointonline": {
+      "connectionName": "shared_sharepointonline",
+      "id": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+      "apiDefinition": {
+        "displayName": "SharePoint"
+      }
+    },
+    "shared_teams": {
+      "connectionName": "shared_teams",
+      "id": "/providers/Microsoft.PowerApps/apis/shared_teams",
+      "apiDefinition": {
+        "displayName": "Microsoft Teams"
+      }
+    }
+  }
+}

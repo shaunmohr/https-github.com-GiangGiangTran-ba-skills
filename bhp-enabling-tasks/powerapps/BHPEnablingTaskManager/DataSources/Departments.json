@@ -1,0 +1,15 @@
+{
+  "Type": "SharePoint",
+  "Name": "Departments",
+  "DisplayName": "Departments",
+  "DataSourceDefinition": {
+    "SharePointSiteUrl": "https://bhp.sharepoint.com/sites/BMAEnablingTasks",
+    "ListName": "Departments",
+    "KeyColumns": ["ID"],
+    "ColumnsToRetrieve": [
+      "ID", "Title", "Site", "ParentDepartment",
+      "SuperintendentEmail", "TeamsChannelId", "TeamsChannelName",
+      "TeamsGroupId", "DepartmentColor", "IsActive"
+    ]
+  }
+}

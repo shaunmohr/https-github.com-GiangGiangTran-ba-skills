@@ -1,0 +1,116 @@
+{
+  "listTitle": "Departments",
+  "note": "Update TeamsChannelId, TeamsGroupId, and SuperintendentEmail fields after SharePoint provisioning — these values are site-specific and cannot be pre-populated. DepartmentColor is used for visual management cards in Power Apps.",
+  "items": [
+    {
+      "Title": "Mine Services - Pump Crew",
+      "Site": "Saraji",
+      "ParentDepartment": "Mine Services",
+      "SuperintendentEmail": "REPLACE_WITH_SUPER_UPN",
+      "TeamsChannelId": "REPLACE_AFTER_TEAMS_SETUP",
+      "TeamsChannelName": "Mine Services - Pump Crew",
+      "TeamsGroupId": "REPLACE_AFTER_TEAMS_SETUP",
+      "DepartmentColor": "#1565C0",
+      "IsActive": true
+    },
+    {
+      "Title": "Mine Services - Road Crew",
+      "Site": "Saraji",
+      "ParentDepartment": "Mine Services",
+      "SuperintendentEmail": "REPLACE_WITH_SUPER_UPN",
+      "TeamsChannelId": "REPLACE_AFTER_TEAMS_SETUP",
+      "TeamsChannelName": "Mine Services - Road Crew",
+      "TeamsGroupId": "REPLACE_AFTER_TEAMS_SETUP",
+      "DepartmentColor": "#6A1B9A",
+      "IsActive": true
+    },
+    {
+      "Title": "Production - Truck & Shovel",
+      "Site": "Saraji",
+      "ParentDepartment": "Production",
+      "SuperintendentEmail": "REPLACE_WITH_SUPER_UPN",
+      "TeamsChannelId": "REPLACE_AFTER_TEAMS_SETUP",
+      "TeamsChannelName": "Production",
+      "TeamsGroupId": "REPLACE_AFTER_TEAMS_SETUP",
+      "DepartmentColor": "#E65100",
+      "IsActive": true
+    },
+    {
+      "Title": "Drill & Blast",
+      "Site": "Saraji",
+      "ParentDepartment": "Drill & Blast",
+      "SuperintendentEmail": "REPLACE_WITH_SUPER_UPN",
+      "TeamsChannelId": "REPLACE_AFTER_TEAMS_SETUP",
+      "TeamsChannelName": "Drill & Blast",
+      "TeamsGroupId": "REPLACE_AFTER_TEAMS_SETUP",
+      "DepartmentColor": "#B71C1C",
+      "IsActive": true
+    },
+    {
+      "Title": "Draglines",
+      "Site": "Saraji",
+      "ParentDepartment": "Draglines",
+      "SuperintendentEmail": "REPLACE_WITH_SUPER_UPN",
+      "TeamsChannelId": "REPLACE_AFTER_TEAMS_SETUP",
+      "TeamsChannelName": "Draglines",
+      "TeamsGroupId": "REPLACE_AFTER_TEAMS_SETUP",
+      "DepartmentColor": "#1B5E20",
+      "IsActive": true
+    },
+    {
+      "Title": "Mine Services - Pump Crew",
+      "Site": "Caval Ridge",
+      "ParentDepartment": "Mine Services",
+      "SuperintendentEmail": "REPLACE_WITH_SUPER_UPN",
+      "TeamsChannelId": "REPLACE_AFTER_TEAMS_SETUP",
+      "TeamsChannelName": "Mine Services - Pump Crew",
+      "TeamsGroupId": "REPLACE_AFTER_TEAMS_SETUP",
+      "DepartmentColor": "#1565C0",
+      "IsActive": true
+    },
+    {
+      "Title": "Mine Services - Road Crew",
+      "Site": "Caval Ridge",
+      "ParentDepartment": "Mine Services",
+      "SuperintendentEmail": "REPLACE_WITH_SUPER_UPN",
+      "TeamsChannelId": "REPLACE_AFTER_TEAMS_SETUP",
+      "TeamsChannelName": "Mine Services - Road Crew",
+      "TeamsGroupId": "REPLACE_AFTER_TEAMS_SETUP",
+      "DepartmentColor": "#6A1B9A",
+      "IsActive": true
+    },
+    {
+      "Title": "Production - Truck & Shovel",
+      "Site": "Caval Ridge",
+      "ParentDepartment": "Production",
+      "SuperintendentEmail": "REPLACE_WITH_SUPER_UPN",
+      "TeamsChannelId": "REPLACE_AFTER_TEAMS_SETUP",
+      "TeamsChannelName": "Production",
+      "TeamsGroupId": "REPLACE_AFTER_TEAMS_SETUP",
+      "DepartmentColor": "#E65100",
+      "IsActive": true
+    },
+    {
+      "Title": "Drill & Blast",
+      "Site": "Caval Ridge",
+      "ParentDepartment": "Drill & Blast",
+      "SuperintendentEmail": "REPLACE_WITH_SUPER_UPN",
+      "TeamsChannelId": "REPLACE_AFTER_TEAMS_SETUP",
+      "TeamsChannelName": "Drill & Blast",
+      "TeamsGroupId": "REPLACE_AFTER_TEAMS_SETUP",
+      "DepartmentColor": "#B71C1C",
+      "IsActive": true
+    },
+    {
+      "Title": "Draglines",
+      "Site": "Caval Ridge",
+      "ParentDepartment": "Draglines",
+      "SuperintendentEmail": "REPLACE_WITH_SUPER_UPN",
+      "TeamsChannelId": "REPLACE_AFTER_TEAMS_SETUP",
+      "TeamsChannelName": "Draglines",
+      "TeamsGroupId": "REPLACE_AFTER_TEAMS_SETUP",
+      "DepartmentColor": "#1B5E20",
+      "IsActive": true
+    }
+  ]
+}

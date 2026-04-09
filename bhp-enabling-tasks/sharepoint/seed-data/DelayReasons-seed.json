@@ -1,0 +1,160 @@
+{
+  "listTitle": "DelayReasons",
+  "note": "Standardised delay reason codes. Consistent use across all sites and departments is critical — a reason code used differently by different supervisors produces meaningless Pareto analysis. The Description field tells supervisors exactly when to use each code.",
+  "items": [
+    {
+      "Title": "Wet weather — rainfall",
+      "Category": "Weather",
+      "Description": "Use when active rainfall or waterlogged conditions directly prevented work from commencing or continuing. Not to be used for residual wet conditions after rain has stopped — use 'Wet conditions — post rain' instead.",
+      "IsControllable": false,
+      "IsActive": true
+    },
+    {
+      "Title": "Wet conditions — post rain",
+      "Category": "Weather",
+      "Description": "Use when ground conditions following a previous rain event prevented work. Area was too wet or muddy to safely operate. Rain had stopped but conditions had not recovered.",
+      "IsControllable": false,
+      "IsActive": true
+    },
+    {
+      "Title": "High winds",
+      "Category": "Weather",
+      "Description": "Use when wind speed exceeded safe operating limits for the work type (e.g. blasting, crane lifts, float operations). Document actual wind speed if recorded.",
+      "IsControllable": false,
+      "IsActive": true
+    },
+    {
+      "Title": "Road inaccessible — weather",
+      "Category": "Access",
+      "Description": "Use when access to the work area was blocked by weather-damaged roads, flooding, or wet crossings. Equipment and personnel could not safely reach the work site.",
+      "IsControllable": false,
+      "IsActive": true
+    },
+    {
+      "Title": "Road inaccessible — not yet constructed",
+      "Category": "Access",
+      "Description": "Use when access road had not been completed before this task was scheduled to start. A preceding road works or earthworks task was not complete. This is a CONTROLLABLE delay — indicates a planning sequencing error.",
+      "IsControllable": true,
+      "IsActive": true
+    },
+    {
+      "Title": "Area not cleared — blast pending",
+      "Category": "Access",
+      "Description": "Use when access to the work area was blocked because a blast exclusion zone was active or a blast had not yet been fired. Post Blast works not yet complete.",
+      "IsControllable": true,
+      "IsActive": true
+    },
+    {
+      "Title": "Area flooded — dewatering incomplete",
+      "Category": "Access",
+      "Description": "Use when the target work area was flooded and dewatering had not been completed before this task was scheduled to start. Indicates Dewater task was not complete in time.",
+      "IsControllable": true,
+      "IsActive": true
+    },
+    {
+      "Title": "Equipment breakdown — own department",
+      "Category": "Equipment",
+      "Description": "Use when plant or equipment allocated to this task suffered a mechanical failure and could not operate. Equipment was owned by the responsible department.",
+      "IsControllable": true,
+      "IsActive": true
+    },
+    {
+      "Title": "Equipment not available — shared resource",
+      "Category": "Equipment",
+      "Description": "Use when the required equipment was working elsewhere and could not be released in time. Equipment is a shared resource across departments (e.g. float, pump, dozer).",
+      "IsControllable": true,
+      "IsActive": true
+    },
+    {
+      "Title": "Equipment not available — float delay",
+      "Category": "Equipment",
+      "Description": "Use specifically when the float (low-loader) was not available or was delayed, preventing equipment transport to the work location.",
+      "IsControllable": true,
+      "IsActive": true
+    },
+    {
+      "Title": "Insufficient crew — absenteeism",
+      "Category": "People",
+      "Description": "Use when there were not enough personnel to safely and productively perform the task due to unplanned absences (sick leave, LWOP, etc.).",
+      "IsControllable": true,
+      "IsActive": true
+    },
+    {
+      "Title": "Insufficient crew — FIFO rotation",
+      "Category": "People",
+      "Description": "Use when crew numbers were reduced due to FIFO changeover timing and replacements had not yet arrived on site.",
+      "IsControllable": true,
+      "IsActive": true
+    },
+    {
+      "Title": "Crew redeployed — higher priority",
+      "Category": "Unplanned Priority",
+      "Description": "Use when the crew assigned to this task was redeployed to a different task by the superintendent or shift supervisor due to an emerging higher priority. The redeployment was a deliberate management decision.",
+      "IsControllable": true,
+      "IsActive": true
+    },
+    {
+      "Title": "Preceding task not complete",
+      "Category": "Sequential Dependency",
+      "Description": "Use when this task could not start because a predecessor task had not been completed. The task sequence was correct but the predecessor ran longer than planned. Identify the specific predecessor task in the notes.",
+      "IsControllable": true,
+      "IsActive": true
+    },
+    {
+      "Title": "Waiting on permit or approval",
+      "Category": "Sequential Dependency",
+      "Description": "Use when work was delayed because a required permit, design approval, inspection, or regulatory approval had not been obtained before the task was due to start. Examples: blast permit, environmental approval, electrical isolation permit.",
+      "IsControllable": true,
+      "IsActive": true
+    },
+    {
+      "Title": "Scope change — design revision",
+      "Category": "Scope Change",
+      "Description": "Use when the scope of the enabling task changed after it was scheduled — design updated by Survey or Engineering, requiring rework or additional work beyond original scope.",
+      "IsControllable": true,
+      "IsActive": true
+    },
+    {
+      "Title": "Scope change — field conditions",
+      "Category": "Scope Change",
+      "Description": "Use when field conditions discovered during execution (e.g. unexpected ground conditions, buried services, unstable material) required more work than planned.",
+      "IsControllable": false,
+      "IsActive": true
+    },
+    {
+      "Title": "Safety stop — hazard identified",
+      "Category": "Safety",
+      "Description": "Use when work was stopped to manage a safety hazard that was identified during execution. Includes falling ground, unstable benches, unplanned water inflows, or any hazard requiring work cessation.",
+      "IsControllable": false,
+      "IsActive": true
+    },
+    {
+      "Title": "Safety stop — exclusion zone",
+      "Category": "Safety",
+      "Description": "Use when work could not proceed because another activity created an exclusion zone over the work area (blasting, crane lift, etc.) that was not planned.",
+      "IsControllable": true,
+      "IsActive": true
+    },
+    {
+      "Title": "Material not available — gravel/reject",
+      "Category": "Access",
+      "Description": "Use when road works or earthworks were delayed because sheeting material (gravel or reject) was not available at the required time. Indicates materials coordination failure.",
+      "IsControllable": true,
+      "IsActive": true
+    },
+    {
+      "Title": "Unplanned task displaced planned task",
+      "Category": "Unplanned Priority",
+      "Description": "Use when an unplanned enabling task arose during the shift that consumed the resources allocated to this planned task. The displacement was not a deliberate redeployment but an unplanned response.",
+      "IsControllable": true,
+      "IsActive": true
+    },
+    {
+      "Title": "Other — see notes",
+      "Category": "Other",
+      "Description": "Use only when no other reason code accurately describes the delay. The notes field MUST be completed with a clear explanation. If this code is being used frequently, notify the mine planner — a new reason code may be needed.",
+      "IsControllable": true,
+      "IsActive": true
+    }
+  ]
+}

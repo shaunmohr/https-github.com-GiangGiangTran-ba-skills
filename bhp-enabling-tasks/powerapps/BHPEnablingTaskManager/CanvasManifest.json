@@ -1,0 +1,16 @@
+{
+  "CanvasManifestVersion": "1.0",
+  "DocumentAppType": "Phone",
+  "DocumentLayoutWidth": 640,
+  "DocumentLayoutHeight": 1136,
+  "DocumentLayoutOrientation": "portrait",
+  "PublishInfo": {
+    "Description": "BHP BMA Enabling Task Manager — tracks enabling tasks required to support major equipment movements at Saraji and Caval Ridge mine sites. Captures completion data for PDCA analysis and probabilistic schedule improvement.",
+    "AppVersion": "1.0.0",
+    "LogoFileName": "bhp-logo.png"
+  },
+  "Header": {
+    "Id": "BHPEnablingTaskManager",
+    "Name": "BHP Enabling Task Manager"
+  }
+}

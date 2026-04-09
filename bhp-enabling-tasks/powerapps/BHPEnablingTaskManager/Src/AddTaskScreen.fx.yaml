@@ -1,0 +1,494 @@
+- 'AddTaskScreen As screen':
+    Properties:
+      Fill: =gblColPageBg
+      OnVisible: |
+        =// If we arrived from Task Detail (edit mode), pre-populate from gblSelectedTask
+        // Otherwise initialise blank for new task
+        If(!IsBlank(gblSelectedTask) && gblNavMode = "Edit",
+            UpdateContext({
+                locTaskTitle:       gblSelectedTask.Title,
+                locTaskTypeId:      gblSelectedTask.TaskTypeId,
+                locDepartment:      gblSelectedTask.Department,
+                locPitBlock:        gblSelectedTask.PitBlock,
+                locPlannedStart:    gblSelectedTask.PlannedStartDate,
+                locPlannedEnd:      gblSelectedTask.PlannedEndDate,
+                locPlannedDuration: gblSelectedTask.PlannedDurationDays,
+                locPriority:        gblSelectedTask.PriorityLevel,
+                locIsCritical:      gblSelectedTask.IsOnCriticalPath,
+                locEquipMovId:      gblSelectedTask.EquipmentMovementId,
+                locShift:           gblSelectedTask.ShiftType,
+                locFormError:       "",
+                locIsSubmitting:    false,
+                locEditMode:        true
+            }),
+            UpdateContext({
+                locTaskTitle:       "",
+                locTaskTypeId:      Blank(),
+                locDepartment:      "",
+                locPitBlock:        "",
+                locPlannedStart:    Today(),
+                locPlannedEnd:      DateAdd(Today(), 1, Days),
+                locPlannedDuration: 1,
+                locPriority:        "Medium",
+                locIsCritical:      false,
+                locEquipMovId:      Blank(),
+                locShift:           "Day",
+                locFormError:       "",
+                locIsSubmitting:    false,
+                locEditMode:        false
+            })
+        )
+    Children:
+
+    # ── HEADER ────────────────────────────────────────────────────────────────
+    - 'AT_Header_Rect As rectangle':
+        Properties:
+          X: =0
+          Y: =0
+          Width: =Parent.Width
+          Height: =90
+          Fill: =gblColHeaderBg
+
+    - 'AT_Cancel_Btn As button':
+        Properties:
+          Text: ="Cancel"
+          X: =8
+          Y: =30
+          Width: =70
+          Height: =36
+          Color: =RGBA(189, 189, 189, 1)
+          Fill: =RGBA(0, 0, 0, 0)
+          BorderColor: =RGBA(0, 0, 0, 0)
+          Size: =13
+          OnSelect: =Navigate(If(locEditMode, TaskDetailScreen, TaskListScreen), ScreenTransition.UnCover)
+
+    - 'AT_Title As label':
+        Properties:
+          Text: =If(locEditMode, "Edit Task", "New Enabling Task")
+          X: =70
+          Y: =30
+          Width: =Parent.Width - 80
+          Height: =36
+          Color: =RGBA(255, 255, 255, 1)
+          FontWeight: =FontWeight.Bold
+          Size: =16
+          VerticalAlign: =VerticalAlign.Middle
+
+    # ── TASK TYPE SELECTOR ────────────────────────────────────────────────────
+    - 'AT_Type_Label As label':
+        Properties:
+          Text: ="Task Type *"
+          X: =16
+          Y: =100
+          Width: =Parent.Width - 32
+          Height: =22
+          Color: =gblColTextSecond
+          FontWeight: =FontWeight.Semibold
+          Size: =12
+
+    - 'AT_Type_Picker As combobox':
+        Properties:
+          Items: =SortByColumns(Filter(colTaskTypes, IsActive = true), "Title", SortOrder.Ascending)
+          X: =16
+          Y: =122
+          Width: =Parent.Width - 32
+          Height: =36
+          InputTextPlaceholder: ="Search and select task type..."
+          DisplayFields: =["Title", "Category"]
+          SearchFields: =["Title", "Category"]
+          DefaultSelectedItems: =Filter(colTaskTypes, ID = locTaskTypeId)
+          OnChange: |
+            =// Auto-fill department and duration from task type standard
+            UpdateContext({
+                locTaskTypeId:      AT_Type_Picker.Selected.ID,
+                locDepartment:      AT_Type_Picker.Selected.DefaultDepartment,
+                locPlannedDuration: AT_Type_Picker.Selected.DurationP50Days,
+                locPlannedEnd:      DateAdd(locPlannedStart, Int(AT_Type_Picker.Selected.DurationP50Days), Days)
+            })
+
+    # P50/P80/P90 reference (shows after type selection)
+    - 'AT_Type_Duration_Ref As label':
+        Properties:
+          Text: |
+            =If(!IsBlank(AT_Type_Picker.Selected),
+                "Standard durations (planner experience): P50 = " &
+                Text(AT_Type_Picker.Selected.DurationP50Days, "0.#") & "d  |  P80 = " &
+                Text(AT_Type_Picker.Selected.DurationP80Days, "0.#") & "d  |  P90 = " &
+                Text(AT_Type_Picker.Selected.DurationP90Days, "0.#") & "d" &
+                If(AT_Type_Picker.Selected.SampleSize > 0,
+                    "  (n=" & Text(AT_Type_Picker.Selected.SampleSize) & " observations)",
+                    "  ⚠ Not yet validated by data"
+                ),
+                ""
+            )
+          X: =16
+          Y: =162
+          Width: =Parent.Width - 32
+          Height: =32
+          Color: =If(IsBlank(AT_Type_Picker.Selected) || AT_Type_Picker.Selected.SampleSize = 0, gblColAmber, gblColTextSecond)
+          Size: =11
+
+    # Done definition reminder
+    - 'AT_DoneDef As label':
+        Properties:
+          Text: |
+            =If(!IsBlank(AT_Type_Picker.Selected),
+                "Done definition: " & AT_Type_Picker.Selected.DoneDefinition,
+                ""
+            )
+          X: =16
+          Y: =196
+          Width: =Parent.Width - 32
+          Height: =44
+          Color: =gblColBlue
+          Size: =11
+          Overflow: =Overflow.Hidden
+
+    # ── TASK NAME ─────────────────────────────────────────────────────────────
+    - 'AT_Name_Label As label':
+        Properties:
+          Text: ="Task Name *  (auto-filled — edit if needed)"
+          X: =16
+          Y: =248
+          Width: =Parent.Width - 32
+          Height: =20
+          Color: =gblColTextSecond
+          FontWeight: =FontWeight.Semibold
+          Size: =12
+
+    - 'AT_Name_Input As text':
+        Properties:
+          X: =16
+          Y: =268
+          Width: =Parent.Width - 32
+          Height: =36
+          Default: |
+            =If(!IsBlank(AT_Type_Picker.Selected),
+                AT_Type_Picker.Selected.Title & If(!IsBlank(locPitBlock), " — " & locPitBlock, ""),
+                locTaskTitle
+            )
+          HintText: ="e.g. Cut North Ramp — Pit 9 Block 3"
+          OnChange: =UpdateContext({locTaskTitle: AT_Name_Input.Text})
+
+    # ── DEPARTMENT ────────────────────────────────────────────────────────────
+    - 'AT_Dept_Label As label':
+        Properties:
+          Text: ="Responsible Department *"
+          X: =16
+          Y: =314
+          Width: =Parent.Width - 32
+          Height: =20
+          Color: =gblColTextSecond
+          FontWeight: =FontWeight.Semibold
+          Size: =12
+
+    - 'AT_Dept_Picker As dropdown':
+        Properties:
+          Items: =["Mine Services - Pump Crew", "Mine Services - Road Crew", "Production - Truck & Shovel", "Drill & Blast", "Draglines", "Rehabilitation", "Survey", "Geotechnical"]
+          X: =16
+          Y: =334
+          Width: =Parent.Width - 32
+          Height: =36
+          Default: =locDepartment
+          OnChange: =UpdateContext({locDepartment: AT_Dept_Picker.SelectedText.Value})
+
+    # ── PIT / BLOCK ───────────────────────────────────────────────────────────
+    - 'AT_PitBlock_Label As label':
+        Properties:
+          Text: ="Pit / Block Location"
+          X: =16
+          Y: =380
+          Width: =Parent.Width - 32
+          Height: =20
+          Color: =gblColTextSecond
+          FontWeight: =FontWeight.Semibold
+          Size: =12
+
+    - 'AT_PitBlock_Input As text':
+        Properties:
+          X: =16
+          Y: =400
+          Width: =Parent.Width - 32
+          Height: =36
+          Default: =locPitBlock
+          HintText: ="e.g. Pit 9 Block 3 North, East Highwall"
+          OnChange: =UpdateContext({locPitBlock: AT_PitBlock_Input.Text})
+
+    # ── DATES AND DURATION ────────────────────────────────────────────────────
+    - 'AT_Dates_Label As label':
+        Properties:
+          Text: ="Schedule *"
+          X: =16
+          Y: =446
+          Width: =Parent.Width - 32
+          Height: =20
+          Color: =gblColTextSecond
+          FontWeight: =FontWeight.Semibold
+          Size: =12
+
+    - 'AT_StartDate_Label As label':
+        Properties:
+          Text: ="Planned Start"
+          X: =16
+          Y: =468
+          Width: =(Parent.Width - 40) / 2
+          Height: =18
+          Color: =gblColTextSecond
+          Size: =11
+
+    - 'AT_EndDate_Label As label':
+        Properties:
+          Text: ="Planned End *"
+          X: =24 + (Parent.Width - 40) / 2
+          Y: =468
+          Width: =(Parent.Width - 40) / 2
+          Height: =18
+          Color: =gblColTextSecond
+          Size: =11
+
+    - 'AT_StartDate_Picker As datepicker':
+        Properties:
+          X: =16
+          Y: =486
+          Width: =(Parent.Width - 40) / 2
+          Height: =36
+          DefaultDate: =locPlannedStart
+          Format: =DateTimeFormat.ShortDate
+          OnChange: |
+            =UpdateContext({
+                locPlannedStart: AT_StartDate_Picker.SelectedDate,
+                locPlannedEnd:   DateAdd(AT_StartDate_Picker.SelectedDate, Int(locPlannedDuration), Days)
+            })
+
+    - 'AT_EndDate_Picker As datepicker':
+        Properties:
+          X: =24 + (Parent.Width - 40) / 2
+          Y: =486
+          Width: =(Parent.Width - 40) / 2
+          Height: =36
+          DefaultDate: =locPlannedEnd
+          Format: =DateTimeFormat.ShortDate
+          OnChange: |
+            =UpdateContext({
+                locPlannedEnd:      AT_EndDate_Picker.SelectedDate,
+                locPlannedDuration: DateDiff(locPlannedStart, AT_EndDate_Picker.SelectedDate, Days)
+            })
+
+    - 'AT_Duration_Label As label':
+        Properties:
+          Text: ="Duration: " & Text(locPlannedDuration, "0.#") & " days"
+          X: =16
+          Y: =528
+          Width: =Parent.Width - 32
+          Height: =20
+          Color: =If(locPlannedDuration > If(!IsBlank(AT_Type_Picker.Selected), AT_Type_Picker.Selected.DurationP80Days, 999), gblColAmber, gblColTextSecond)
+          Size: =12
+          FontWeight: =FontWeight.Semibold
+
+    - 'AT_Duration_Warning As label':
+        Properties:
+          Text: |
+            =If(
+                !IsBlank(AT_Type_Picker.Selected) && locPlannedDuration > AT_Type_Picker.Selected.DurationP80Days,
+                "⚠  Duration exceeds P80 standard. Ensure this is intentional.",
+                ""
+            )
+          X: =16
+          Y: =548
+          Width: =Parent.Width - 32
+          Height: =24
+          Color: =gblColAmber
+          Size: =11
+
+    # ── PRIORITY AND CRITICAL PATH ────────────────────────────────────────────
+    - 'AT_Priority_Label As label':
+        Properties:
+          Text: ="Priority"
+          X: =16
+          Y: =576
+          Width: =180
+          Height: =20
+          Color: =gblColTextSecond
+          FontWeight: =FontWeight.Semibold
+          Size: =12
+
+    - 'AT_Priority_Picker As dropdown':
+        Properties:
+          Items: =["Critical", "High", "Medium", "Low"]
+          X: =16
+          Y: =596
+          Width: =180
+          Height: =36
+          Default: =locPriority
+          OnChange: =UpdateContext({locPriority: AT_Priority_Picker.SelectedText.Value})
+
+    - 'AT_CritPath_Label As label':
+        Properties:
+          Text: ="On Critical Path"
+          X: =210
+          Y: =580
+          Width: =Parent.Width - 226
+          Height: =20
+          Color: =gblColTextSecond
+          FontWeight: =FontWeight.Semibold
+          Size: =12
+
+    - 'AT_CritPath_Toggle As toggle':
+        Properties:
+          X: =210
+          Y: =600
+          Width: =Parent.Width - 226
+          Height: =32
+          Default: =locIsCritical
+          TrueText: ="Yes — Critical Path"
+          FalseText: ="No"
+          OnCheck: =UpdateContext({locIsCritical: true})
+          OnUncheck: =UpdateContext({locIsCritical: false})
+
+    # ── LINKED EQUIPMENT MOVEMENT ─────────────────────────────────────────────
+    - 'AT_Equip_Label As label':
+        Properties:
+          Text: ="Link to Equipment Movement"
+          X: =16
+          Y: =642
+          Width: =Parent.Width - 32
+          Height: =20
+          Color: =gblColTextSecond
+          FontWeight: =FontWeight.Semibold
+          Size: =12
+
+    - 'AT_Equip_Picker As combobox':
+        Properties:
+          Items: =SortByColumns(colEquipmentMovements, "PlannedMoveDate", SortOrder.Ascending)
+          X: =16
+          Y: =662
+          Width: =Parent.Width - 32
+          Height: =36
+          InputTextPlaceholder: ="Select equipment movement (optional)..."
+          DisplayFields: =["EquipmentID", "Title"]
+          SearchFields: =["Title", "EquipmentID"]
+          DefaultSelectedItems: =Filter(colEquipmentMovements, ID = locEquipMovId)
+          OnChange: =UpdateContext({locEquipMovId: AT_Equip_Picker.Selected.ID})
+
+    # ── ERROR MESSAGE ─────────────────────────────────────────────────────────
+    - 'AT_Error_Label As label':
+        Properties:
+          Text: =locFormError
+          X: =16
+          Y: =Parent.Height - 118
+          Width: =Parent.Width - 32
+          Height: =If(IsBlank(locFormError), 0, 40)
+          Color: =gblColRed
+          Size: =12
+          FontWeight: =FontWeight.Semibold
+          Visible: =!IsBlank(locFormError)
+
+    # ── SUBMIT BUTTON ─────────────────────────────────────────────────────────
+    - 'AT_Submit_Btn As button':
+        Properties:
+          Text: =If(locIsSubmitting, "Saving...", If(locEditMode, "Save Changes", "Add Task"))
+          X: =16
+          Y: =Parent.Height - 116
+          Width: =Parent.Width - 32
+          Height: =52
+          Fill: =If(locIsSubmitting, ColorFade(gblColBHPRed, 0.4), gblColBHPRed)
+          Color: =RGBA(255, 255, 255, 1)
+          BorderColor: =RGBA(0, 0, 0, 0)
+          FontWeight: =FontWeight.Bold
+          Size: =16
+          RadiusTopLeft: =8
+          RadiusTopRight: =8
+          RadiusBottomLeft: =8
+          RadiusBottomRight: =8
+          DisplayMode: =If(locIsSubmitting, DisplayMode.Disabled, DisplayMode.Edit)
+          OnSelect: |
+            =// ── Validation ──────────────────────────────────────────────────
+            If(
+                IsBlank(AT_Type_Picker.Selected),
+                UpdateContext({locFormError: "Please select a Task Type before saving."}),
+                If(
+                    IsBlank(AT_Name_Input.Text) || Len(Trim(AT_Name_Input.Text)) < 5,
+                    UpdateContext({locFormError: "Please enter a task name (minimum 5 characters)."}),
+                    If(
+                        IsBlank(locDepartment),
+                        UpdateContext({locFormError: "Please select the responsible department."}),
+                        If(
+                            IsBlank(AT_StartDate_Picker.SelectedDate) || IsBlank(AT_EndDate_Picker.SelectedDate),
+                            UpdateContext({locFormError: "Please select both a planned start and end date."}),
+                            If(
+                                AT_EndDate_Picker.SelectedDate < AT_StartDate_Picker.SelectedDate,
+                                UpdateContext({locFormError: "End date cannot be before start date."}),
+                                // ── Valid — submit ─────────────────────────────────────
+                                UpdateContext({locIsSubmitting: true, locFormError: ""});
+
+                                If(locEditMode,
+                                    // Edit existing task
+                                    Patch(EnabledTasks,
+                                        LookUp(EnabledTasks, ID = gblSelectedTask.ID),
+                                        {
+                                            Title:              AT_Name_Input.Text,
+                                            TaskTypeId:         AT_Type_Picker.Selected.ID,
+                                            Department:         locDepartment,
+                                            Site:               gblCurrentSite,
+                                            PitBlock:           AT_PitBlock_Input.Text,
+                                            PlannedStartDate:   AT_StartDate_Picker.SelectedDate,
+                                            PlannedEndDate:     AT_EndDate_Picker.SelectedDate,
+                                            PlannedDurationDays: locPlannedDuration,
+                                            PriorityLevel:      locPriority,
+                                            IsOnCriticalPath:   locIsCritical,
+                                            EquipmentMovementId: locEquipMovId,
+                                            ShiftType:          AT_Shift_Picker.SelectedText.Value,
+                                            PlannerEmail:       {Email: gblCurrentUser.Email, DisplayName: gblCurrentUser.FullName}
+                                        }
+                                    ),
+                                    // New task
+                                    Patch(EnabledTasks,
+                                        Defaults(EnabledTasks),
+                                        {
+                                            Title:              AT_Name_Input.Text,
+                                            TaskTypeId:         AT_Type_Picker.Selected.ID,
+                                            Department:         locDepartment,
+                                            Site:               gblCurrentSite,
+                                            PitBlock:           AT_PitBlock_Input.Text,
+                                            PlannedStartDate:   AT_StartDate_Picker.SelectedDate,
+                                            PlannedEndDate:     AT_EndDate_Picker.SelectedDate,
+                                            PlannedDurationDays: locPlannedDuration,
+                                            PriorityLevel:      locPriority,
+                                            IsOnCriticalPath:   locIsCritical,
+                                            EquipmentMovementId: locEquipMovId,
+                                            ShiftType:          AT_Shift_Picker.SelectedText.Value,
+                                            Status:             "Not Started",
+                                            IsUnplanned:        false,
+                                            PlannerEmail:       {Email: gblCurrentUser.Email, DisplayName: gblCurrentUser.FullName}
+                                        }
+                                    )
+                                );
+
+                                // Refresh cache
+                                ClearCollect(colTodaysTasks,
+                                    Filter(EnabledTasks,
+                                        Site = gblCurrentSite &&
+                                        PlannedStartDate <= Today() &&
+                                        PlannedEndDate   >= Today()
+                                    )
+                                );
+
+                                UpdateContext({locIsSubmitting: false});
+                                Set(gblNavMode, "");
+                                Navigate(TaskListScreen, ScreenTransition.UnCover)
+                            )
+                        )
+                    )
+                )
+            )
+
+    - 'AT_Shift_Picker As dropdown':
+        Properties:
+          Items: =["Day", "Night", "Afternoon", "Multi-Shift"]
+          X: =16
+          Y: =706
+          Width: =Parent.Width - 32
+          Height: =36
+          Default: =locShift
+          OnChange: =UpdateContext({locShift: AT_Shift_Picker.SelectedText.Value})
+          Visible: =false

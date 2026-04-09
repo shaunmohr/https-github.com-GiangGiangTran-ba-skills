@@ -1,0 +1,54 @@
+- 'App As appinfo':
+    Properties:
+      BackEnabled: =false
+      OnStart: |
+        =// ── Global variables ──────────────────────────────────────────
+        // Current user and site context
+        Set(gblCurrentUser, User());
+        Set(gblCurrentSite, "Saraji");
+        Set(gblCurrentDate, Today());
+        Set(gblNavPage, "Home");
+
+        // ── Colour palette (BHP / BMA brand) ──────────────────────────
+        Set(gblColBHPRed,       RGBA(219,  37,  28, 1));   // Primary brand red
+        Set(gblColHeaderBg,     RGBA( 33,  33,  33, 1));   // Dark charcoal header
+        Set(gblColPageBg,       RGBA(247, 247, 247, 1));   // Light grey page background
+        Set(gblColCardBg,       RGBA(255, 255, 255, 1));   // White card background
+        Set(gblColTextPrimary,  RGBA( 33,  33,  33, 1));   // Dark text
+        Set(gblColTextSecond,   RGBA(117, 117, 117, 1));   // Secondary / label text
+        Set(gblColGreen,        RGBA( 46, 125,  50, 1));   // Complete / on track
+        Set(gblColAmber,        RGBA(245, 124,   0, 1));   // In progress / at risk
+        Set(gblColRed,          RGBA(198,  40,  40, 1));   // Overdue / critical
+        Set(gblColBlue,         RGBA( 21,  101, 192, 1));  // Informational / link
+        Set(gblColBorder,       RGBA(224, 224, 224, 1));   // Card / input borders
+        Set(gblColNavBg,        RGBA( 33,  33,  33, 1));   // Bottom nav background
+        Set(gblColNavActive,    RGBA(219,  37,  28, 1));   // Active nav item
+        Set(gblColNavInactive,  RGBA(189, 189, 189, 1));   // Inactive nav item
+
+        // ── Pre-load reference data (cached for session performance) ──
+        ClearCollect(colTaskTypes,    Filter(TaskTypes,    IsActive = true));
+        ClearCollect(colDelayReasons, Filter(DelayReasons, IsActive = true));
+        ClearCollect(colDepartments,  Filter(Departments,  IsActive = true && Site = gblCurrentSite));
+        ClearCollect(colEquipmentMovements,
+            Filter(EquipmentMovements,
+                Site = gblCurrentSite &&
+                MovementStatus <> "Executed" &&
+                MovementStatus <> "Cancelled"
+            )
+        );
+
+        // ── Today's tasks for this site ────────────────────────────────
+        ClearCollect(colTodaysTasks,
+            Filter(EnabledTasks,
+                Site = gblCurrentSite &&
+                PlannedStartDate <= gblCurrentDate &&
+                PlannedEndDate   >= gblCurrentDate
+            )
+        );
+
+        // ── Navigate to home screen ────────────────────────────────────
+        Navigate(HomeScreen, ScreenTransition.None)
+
+      Theme: =RGBA(219, 37, 28, 1)
+
+    Children: []

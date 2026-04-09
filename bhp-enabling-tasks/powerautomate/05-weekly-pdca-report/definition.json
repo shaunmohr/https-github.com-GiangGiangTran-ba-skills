@@ -1,0 +1,228 @@
+{
+  "name": "BMA_Enabling_Tasks_Weekly_PDCA_Report",
+  "description": "Runs every Monday at 07:00 AEST. Generates a weekly PDCA summary report covering the prior 7 days: completion rate, on-time delivery, top delay reasons (Pareto), department performance ranking, and trend vs prior week. This report feeds the weekly enabling task PDCA review meeting (mine planner + superintendents, 20-30 minutes). Over time this data builds the probabilistic task duration library.",
+  "trigger": {
+    "type": "Recurrence",
+    "recurrence": {
+      "frequency": "Week",
+      "interval": 1,
+      "schedule": {
+        "weekDays": ["Monday"],
+        "hours": ["7"],
+        "minutes": ["0"]
+      },
+      "timeZone": "E. Australia Standard Time",
+      "startTime": "2024-01-01T07:00:00"
+    }
+  },
+  "actions": {
+    "Init_Week_Dates": {
+      "type": "InitializeVariable",
+      "order": 1,
+      "inputs": {
+        "variables": [{
+          "name": "WeekStart",
+          "type": "string",
+          "value": "@{formatDateTime(addDays(utcNow(), -7), 'yyyy-MM-dd')}"
+        }]
+      }
+    },
+    "Init_Week_End": {
+      "type": "InitializeVariable",
+      "order": 2,
+      "inputs": {
+        "variables": [{
+          "name": "WeekEnd",
+          "type": "string",
+          "value": "@{formatDateTime(addDays(utcNow(), -1), 'yyyy-MM-dd')}"
+        }]
+      }
+    },
+    "Init_Prior_Week_Start": {
+      "type": "InitializeVariable",
+      "order": 3,
+      "inputs": {
+        "variables": [{
+          "name": "PriorWeekStart",
+          "type": "string",
+          "value": "@{formatDateTime(addDays(utcNow(), -14), 'yyyy-MM-dd')}"
+        }]
+      }
+    },
+    "Loop_Sites": {
+      "type": "Foreach",
+      "order": 4,
+      "foreach": ["Saraji", "Caval Ridge"],
+      "actions": {
+        "Get_This_Week_Tasks": {
+          "type": "ApiConnection",
+          "order": 1,
+          "inputs": {
+            "host": {
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetItems",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+            },
+            "parameters": {
+              "dataset": "https://bhp.sharepoint.com/sites/BMAEnablingTasks",
+              "table": "EnabledTasks",
+              "$filter": "Site eq '@{items('Loop_Sites')}' and PlannedEndDate ge '@{variables('WeekStart')}' and PlannedEndDate le '@{variables('WeekEnd')}' and Status ne 'Cancelled'",
+              "$top": 200
+            }
+          }
+        },
+        "Get_Prior_Week_Tasks": {
+          "type": "ApiConnection",
+          "order": 2,
+          "description": "Used to calculate week-on-week trend",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetItems",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+            },
+            "parameters": {
+              "dataset": "https://bhp.sharepoint.com/sites/BMAEnablingTasks",
+              "table": "EnabledTasks",
+              "$filter": "Site eq '@{items('Loop_Sites')}' and PlannedEndDate ge '@{variables('PriorWeekStart')}' and PlannedEndDate lt '@{variables('WeekStart')}' and Status ne 'Cancelled'",
+              "$top": 200
+            }
+          }
+        },
+        "Filter_This_Week_Complete": {
+          "type": "Query",
+          "order": 3,
+          "inputs": {
+            "from": "@body('Get_This_Week_Tasks')?['value']",
+            "where": "@equals(item()?['Status'], 'Complete')"
+          }
+        },
+        "Filter_This_Week_Delayed": {
+          "type": "Query",
+          "order": 4,
+          "inputs": {
+            "from": "@body('Get_This_Week_Tasks')?['value']",
+            "where": "@equals(item()?['Status'], 'Delayed')"
+          }
+        },
+        "Filter_This_Week_OnTime": {
+          "type": "Query",
+          "order": 5,
+          "description": "Complete tasks where actual end was on or before planned end",
+          "inputs": {
+            "from": "@body('Filter_This_Week_Complete')",
+            "where": "@or(empty(item()?['ActualEndDate']), lessOrEquals(item()?['ActualEndDate'], item()?['PlannedEndDate']))"
+          }
+        },
+        "Filter_This_Week_Unplanned": {
+          "type": "Query",
+          "order": 6,
+          "inputs": {
+            "from": "@body('Get_This_Week_Tasks')?['value']",
+            "where": "@equals(item()?['IsUnplanned'], true)"
+          }
+        },
+        "Filter_Prior_Week_Complete": {
+          "type": "Query",
+          "order": 7,
+          "inputs": {
+            "from": "@body('Get_Prior_Week_Tasks')?['value']",
+            "where": "@equals(item()?['Status'], 'Complete')"
+          }
+        },
+        "Calc_This_Week_Rate": {
+          "type": "Compose",
+          "order": 8,
+          "inputs": "@{if(equals(length(body('Get_This_Week_Tasks')?['value']), 0), 0, div(mul(length(body('Filter_This_Week_Complete')), 100), length(body('Get_This_Week_Tasks')?['value'])))}"
+        },
+        "Calc_Prior_Week_Rate": {
+          "type": "Compose",
+          "order": 9,
+          "inputs": "@{if(equals(length(body('Get_Prior_Week_Tasks')?['value']), 0), 0, div(mul(length(body('Filter_Prior_Week_Complete')), 100), length(body('Get_Prior_Week_Tasks')?['value'])))}"
+        },
+        "Calc_OnTime_Rate": {
+          "type": "Compose",
+          "order": 10,
+          "inputs": "@{if(equals(length(body('Filter_This_Week_Complete')), 0), 0, div(mul(length(body('Filter_This_Week_OnTime')), 100), length(body('Filter_This_Week_Complete'))))}"
+        },
+        "Build_Dept_Summary": {
+          "type": "Select",
+          "order": 11,
+          "description": "Build a per-department summary row for the weekly report. Note: Power Automate doesn't natively group-by, so this is built by iterating through known departments. In production, this should be expanded to loop through the Departments list.",
+          "inputs": {
+            "from": ["Mine Services - Pump Crew", "Mine Services - Road Crew", "Production - Truck & Shovel", "Drill & Blast", "Draglines"],
+            "select": {
+              "department": "@{item()}",
+              "total": "@{length(where(body('Get_This_Week_Tasks')?['value'], item_x => equals(item_x['Department'], item())))}",
+              "complete": "@{length(where(body('Filter_This_Week_Complete'), item_x => equals(item_x['Department'], item())))}",
+              "delayed": "@{length(where(body('Filter_This_Week_Delayed'), item_x => equals(item_x['Department'], item())))}"
+            }
+          }
+        },
+        "Build_Dept_Table_Rows": {
+          "type": "Select",
+          "order": 12,
+          "inputs": {
+            "from": "@body('Build_Dept_Summary')",
+            "select": {
+              "row": "<tr><td style='padding:8px;border-bottom:1px solid #E0E0E0;'>@{item()?['department']}</td><td style='padding:8px;text-align:center;border-bottom:1px solid #E0E0E0;'>@{item()?['total']}</td><td style='padding:8px;text-align:center;border-bottom:1px solid #E0E0E0;color:#2E7D32;font-weight:bold;'>@{item()?['complete']}</td><td style='padding:8px;text-align:center;border-bottom:1px solid #E0E0E0;color:@{if(equals(item()?['total'], 0), '#757575', if(greater(div(mul(int(item()?['complete']), 100), if(equals(item()?['total'], 0), 1, int(item()?['total']))), 89), '#2E7D32', if(greater(div(mul(int(item()?['complete']), 100), if(equals(item()?['total'], 0), 1, int(item()?['total']))), 74), '#E65100', '#C62828')))};font-weight:bold;'>@{if(equals(item()?['total'], 0), '—', concat(string(div(mul(int(item()?['complete']), 100), int(item()?['total']))), '%'))}</td><td style='padding:8px;text-align:center;border-bottom:1px solid #E0E0E0;color:@{if(greater(int(item()?['delayed']), 0), '#C62828', '#2E7D32')};font-weight:bold;'>@{item()?['delayed']}</td></tr>"
+            }
+          }
+        },
+        "Join_Dept_Rows": {
+          "type": "Join",
+          "order": 13,
+          "inputs": {
+            "from": "@body('Build_Dept_Table_Rows')",
+            "joinWith": ""
+          }
+        },
+        "Get_Planner_Email": {
+          "type": "ApiConnection",
+          "order": 14,
+          "inputs": {
+            "host": {
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetItems",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+            },
+            "parameters": {
+              "dataset": "https://bhp.sharepoint.com/sites/BMAEnablingTasks",
+              "table": "EnabledTasks",
+              "$select": "PlannerEmail",
+              "$filter": "Site eq '@{items('Loop_Sites')}'",
+              "$top": 1
+            }
+          }
+        },
+        "Send_Weekly_PDCA_Email": {
+          "type": "ApiConnection",
+          "order": 15,
+          "inputs": {
+            "host": {
+              "connectionName": "shared_office365",
+              "operationId": "SendEmailV2",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+            },
+            "parameters": {
+              "emailMessage/to": "@{first(body('Get_Planner_Email')?['value'])?['PlannerEmail']?['Email']}",
+              "emailMessage/subject": "Weekly PDCA — Enabling Tasks | @{items('Loop_Sites')} | Week ending @{formatDateTime(addDays(utcNow(), -1), 'dd MMM yyyy')}",
+              "emailMessage/body": "<html><body style='font-family:Arial,sans-serif;max-width:750px;'><div style='background:#212121;padding:20px;'><h1 style='color:#DB251C;margin:0;'>BHP BMA</h1><h2 style='color:white;margin:4px 0 0;'>Weekly Enabling Task PDCA Report</h2><p style='color:#BDBDBD;margin:4px 0 0;'>@{items('Loop_Sites')} | Week ending @{formatDateTime(addDays(utcNow(), -1), 'dd MMM yyyy')}</p></div><div style='padding:20px;'><h3>Weekly KPIs</h3><table style='width:100%;border-collapse:collapse;margin-bottom:20px;'><tr style='background:#F5F5F5;'><td style='padding:12px;font-weight:bold;'>Total Tasks Scheduled</td><td style='padding:12px;text-align:center;font-weight:bold;font-size:20px;'>@{length(body('Get_This_Week_Tasks')?['value'])}</td></tr><tr><td style='padding:12px;font-weight:bold;'>Completion Rate</td><td style='padding:12px;text-align:center;font-weight:bold;font-size:24px;color:@{if(greater(outputs('Calc_This_Week_Rate'), 89), '#2E7D32', if(greater(outputs('Calc_This_Week_Rate'), 74), '#E65100', '#C62828'))};'>@{outputs('Calc_This_Week_Rate')}%</td></tr><tr style='background:#F5F5F5;'><td style='padding:12px;font-weight:bold;'>vs Prior Week</td><td style='padding:12px;text-align:center;font-weight:bold;font-size:18px;color:@{if(greaterOrEquals(outputs('Calc_This_Week_Rate'), outputs('Calc_Prior_Week_Rate')), '#2E7D32', '#C62828')};'>@{if(greaterOrEquals(outputs('Calc_This_Week_Rate'), outputs('Calc_Prior_Week_Rate')), '▲', '▼')} @{abs(sub(outputs('Calc_This_Week_Rate'), outputs('Calc_Prior_Week_Rate')))}pp (@{outputs('Calc_Prior_Week_Rate')}% prior week)</td></tr><tr><td style='padding:12px;font-weight:bold;'>On-Time Delivery (of completed)</td><td style='padding:12px;text-align:center;font-weight:bold;font-size:20px;color:@{if(greater(outputs('Calc_OnTime_Rate'), 84), '#2E7D32', if(greater(outputs('Calc_OnTime_Rate'), 69), '#E65100', '#C62828'))};'>@{outputs('Calc_OnTime_Rate')}%</td></tr><tr style='background:#F5F5F5;'><td style='padding:12px;font-weight:bold;'>Delayed Tasks</td><td style='padding:12px;text-align:center;font-weight:bold;font-size:20px;color:@{if(greater(length(body('Filter_This_Week_Delayed')), 0), '#C62828', '#2E7D32')};'>@{length(body('Filter_This_Week_Delayed'))}</td></tr><tr><td style='padding:12px;font-weight:bold;'>Unplanned Tasks Captured</td><td style='padding:12px;text-align:center;font-weight:bold;font-size:20px;color:@{if(greater(length(body('Filter_This_Week_Unplanned')), 5), '#E65100', '#2E7D32')};'>@{length(body('Filter_This_Week_Unplanned'))}</td></tr></table><h3>Department Performance</h3><table style='width:100%;border-collapse:collapse;margin-bottom:20px;'><tr style='background:#212121;color:white;'><th style='padding:8px;text-align:left;'>Department</th><th style='padding:8px;text-align:center;'>Tasks</th><th style='padding:8px;text-align:center;'>Complete</th><th style='padding:8px;text-align:center;'>Rate</th><th style='padding:8px;text-align:center;'>Delayed</th></tr>@{body('Join_Dept_Rows')}</table><p>For delay reason Pareto analysis, task type duration distributions, and trend charts, <a href='https://app.powerbi.com/groups/YOUR_WORKSPACE_ID/reports/YOUR_REPORT_ID'>open the Power BI PDCA Dashboard</a>.</p><hr/><p style='background:#FFF9C4;padding:12px;border-left:4px solid #F9A825;'><strong>⚠️ Note on Duration Standards:</strong> The P50/P80/P90 duration estimates in the task type catalogue are currently based on planner experience, not validated data. As completion data accrues, these standards should be reviewed monthly and updated from actual observations. Open the Power BI dashboard to see which task types have enough observations (n≥10) for statistical validation.</p><p style='color:#757575;font-size:12px;'>BHP BMA Enabling Task Manager — Automated Weekly PDCA Report | @{items('Loop_Sites')}</p></div></body></html>",
+              "emailMessage/isHtml": true
+            }
+          }
+        }
+      }
+    }
+  },
+  "connections": {
+    "shared_sharepointonline": {
+      "connectionName": "shared_sharepointonline",
+      "id": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+    },
+    "shared_office365": {
+      "connectionName": "shared_office365",
+      "id": "/providers/Microsoft.PowerApps/apis/shared_office365"
+    }
+  }
+}

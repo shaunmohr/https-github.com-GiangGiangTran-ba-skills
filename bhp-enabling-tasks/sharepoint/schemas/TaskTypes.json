@@ -1,0 +1,134 @@
+{
+  "listTitle": "TaskTypes",
+  "listDescription": "BMA enabling task catalogue — standardised task types with done-definitions and probabilistic duration standards. Duration standards are seeded from planner experience and updated monthly as real data accrues.",
+  "templateType": 100,
+  "enableVersioning": true,
+  "columns": [
+    {
+      "internalName": "Title",
+      "displayName": "Task Type Name",
+      "type": "Text",
+      "required": true,
+      "maxLength": 100,
+      "description": "Standardised name for this enabling task type — matches the BMA enabling task catalogue"
+    },
+    {
+      "internalName": "Category",
+      "displayName": "Category",
+      "type": "Choice",
+      "required": true,
+      "choices": [
+        "Access & Roads",
+        "Drainage & Dewatering",
+        "Earthworks",
+        "Equipment & Float",
+        "Ground Preparation",
+        "Infrastructure",
+        "Safety & Environment",
+        "Services & Utilities"
+      ],
+      "description": "Functional category for grouping and reporting"
+    },
+    {
+      "internalName": "DefaultDepartment",
+      "displayName": "Default Department",
+      "type": "Choice",
+      "required": true,
+      "choices": [
+        "Mine Services - Pump Crew",
+        "Mine Services - Road Crew",
+        "Production - Truck & Shovel",
+        "Drill & Blast",
+        "Draglines",
+        "Rehabilitation",
+        "Survey",
+        "Geotechnical",
+        "Multiple"
+      ],
+      "description": "Department most commonly responsible for this task type"
+    },
+    {
+      "internalName": "DurationP50Days",
+      "displayName": "P50 Duration (Days)",
+      "type": "Number",
+      "required": true,
+      "decimalPlaces": 1,
+      "min": 0.25,
+      "description": "Median expected duration in days — 50% of tasks complete within this time. Seeded from planner experience; updated monthly from actuals."
+    },
+    {
+      "internalName": "DurationP80Days",
+      "displayName": "P80 Duration (Days)",
+      "type": "Number",
+      "required": true,
+      "decimalPlaces": 1,
+      "min": 0.25,
+      "description": "80% of tasks complete within this duration. Use as planned duration for critical path tasks."
+    },
+    {
+      "internalName": "DurationP90Days",
+      "displayName": "P90 Duration (Days)",
+      "type": "Number",
+      "required": true,
+      "decimalPlaces": 1,
+      "min": 0.25,
+      "description": "90% of tasks complete within this duration. Use as contingency planning value."
+    },
+    {
+      "internalName": "SampleSize",
+      "displayName": "Observations (n)",
+      "type": "Number",
+      "required": false,
+      "defaultValue": 0,
+      "description": "Number of actual task completions used to calculate the P50/P80/P90 estimates. 0 = planner estimate only, not yet validated by data."
+    },
+    {
+      "internalName": "DoneDefinition",
+      "displayName": "Done Definition",
+      "type": "Note",
+      "required": true,
+      "richText": false,
+      "description": "Specific criteria that define when this task is considered complete — removes ambiguity at shift level"
+    },
+    {
+      "internalName": "PlannerNotes",
+      "displayName": "Planner Notes",
+      "type": "Note",
+      "required": false,
+      "richText": false,
+      "description": "Planning considerations, typical predecessor tasks, common issues to watch for"
+    },
+    {
+      "internalName": "TypicalPredecessors",
+      "displayName": "Typical Predecessor Tasks",
+      "type": "Text",
+      "required": false,
+      "maxLength": 500,
+      "description": "Task types that typically must complete before this task can start (comma-separated)"
+    },
+    {
+      "internalName": "TypicalSuccessors",
+      "displayName": "Typical Successor Tasks",
+      "type": "Text",
+      "required": false,
+      "maxLength": 500,
+      "description": "Task types that typically cannot start until this task completes (comma-separated)"
+    },
+    {
+      "internalName": "IsActive",
+      "displayName": "Active",
+      "type": "Boolean",
+      "required": false,
+      "defaultValue": true,
+      "description": "Set to false to retire a task type without deleting historical records"
+    },
+    {
+      "internalName": "LastDurationReview",
+      "displayName": "Duration Last Reviewed",
+      "type": "DateTime",
+      "required": false,
+      "format": "DateOnly",
+      "description": "Date the P50/P80/P90 estimates were last reviewed and updated from actual data"
+    }
+  ]
+}

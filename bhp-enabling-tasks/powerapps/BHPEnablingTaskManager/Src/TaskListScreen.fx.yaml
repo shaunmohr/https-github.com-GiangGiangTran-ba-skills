@@ -1,0 +1,377 @@
+- 'TaskListScreen As screen':
+    Properties:
+      Fill: =gblColPageBg
+    Children:
+
+    # ── HEADER ────────────────────────────────────────────────────────────────
+    - 'TL_Header_Rect As rectangle':
+        Properties:
+          X: =0
+          Y: =0
+          Width: =Parent.Width
+          Height: =90
+          Fill: =gblColHeaderBg
+
+    - 'TL_Back_Btn As button':
+        Properties:
+          Text: ="< Home"
+          X: =8
+          Y: =30
+          Width: =80
+          Height: =36
+          Color: =RGBA(255, 255, 255, 1)
+          Fill: =RGBA(0, 0, 0, 0)
+          BorderColor: =RGBA(0, 0, 0, 0)
+          FontWeight: =FontWeight.Normal
+          Size: =13
+          OnSelect: =Navigate(HomeScreen, ScreenTransition.Fade)
+
+    - 'TL_Title As label':
+        Properties:
+          Text: ="Enabling Tasks"
+          X: =80
+          Y: =30
+          Width: =Parent.Width - 96
+          Height: =36
+          Color: =RGBA(255, 255, 255, 1)
+          FontWeight: =FontWeight.Bold
+          Size: =16
+          VerticalAlign: =VerticalAlign.Middle
+
+    # ── FILTER BAR ────────────────────────────────────────────────────────────
+    - 'TL_Filter_Bg As rectangle':
+        Properties:
+          X: =0
+          Y: =90
+          Width: =Parent.Width
+          Height: =104
+          Fill: =RGBA(255, 255, 255, 1)
+          BorderColor: =gblColBorder
+          BorderThickness: =0
+
+    - 'TL_Filter_Dept_Label As label':
+        Properties:
+          Text: ="Department"
+          X: =16
+          Y: =98
+          Width: =Parent.Width - 32
+          Height: =20
+          Color: =gblColTextSecond
+          Size: =11
+
+    - 'TL_Filter_Dept As dropdown':
+        Properties:
+          Items: =Ungroup(Table({Value: "All Departments"}, Table({Value: "Mine Services - Pump Crew"}, {Value: "Mine Services - Road Crew"}, {Value: "Production - Truck & Shovel"}, {Value: "Drill & Blast"}, {Value: "Draglines"})), "Value")
+          X: =16
+          Y: =118
+          Width: =(Parent.Width - 40) / 2
+          Height: =36
+          Default: =gblFilterDept
+          OnChange: =Set(gblFilterDept, TL_Filter_Dept.SelectedText.Value)
+
+    - 'TL_Filter_Status As dropdown':
+        Properties:
+          Items: =["All Status", "Not Started", "In Progress", "Delayed", "Complete"]
+          X: =24 + (Parent.Width - 40) / 2
+          Y: =118
+          Width: =(Parent.Width - 40) / 2
+          Height: =36
+          Default: ="All Status"
+          OnChange: =Set(gblFilterStatus, TL_Filter_Status.SelectedText.Value)
+
+    - 'TL_Filter_DateRange As dropdown':
+        Properties:
+          Items: =["Today", "This Week", "Next 7 Days", "Next 14 Days", "All Upcoming", "Overdue Only"]
+          X: =16
+          Y: =160
+          Width: =Parent.Width - 32
+          Height: =0
+          Visible: =false
+
+    # ── QUICK FILTER CHIPS ────────────────────────────────────────────────────
+    - 'TL_Chip_Gallery As gallery':
+        Properties:
+          Items: =["Overdue", "Today", "This Week", "Critical Path"]
+          X: =8
+          Y: =162
+          Width: =Parent.Width - 16
+          Height: =32
+          TemplateSize: =120
+          TemplatePadding: =4
+          Layout: =Layout.Horizontal
+          ShowScrollbar: =false
+          OnSelect: =Set(gblQuickFilter, If(gblQuickFilter = ThisItem.Value, "", ThisItem.Value))
+        Children:
+        - 'TL_Chip_Rect As rectangle':
+            Properties:
+              X: =0
+              Y: =0
+              Width: =116
+              Height: =28
+              Fill: =If(gblQuickFilter = ThisItem.Value, gblColBHPRed, gblColPageBg)
+              BorderColor: =If(gblQuickFilter = ThisItem.Value, gblColBHPRed, gblColBorder)
+              BorderThickness: =1
+              RadiusTopLeft: =14
+              RadiusTopRight: =14
+              RadiusBottomLeft: =14
+              RadiusBottomRight: =14
+        - 'TL_Chip_Label As label':
+            Properties:
+              Text: =ThisItem.Value
+              X: =0
+              Y: =4
+              Width: =116
+              Height: =20
+              Align: =Align.Center
+              Size: =11
+              Color: =If(gblQuickFilter = ThisItem.Value, RGBA(255,255,255,1), gblColTextPrimary)
+
+    # ── RESULT COUNT ─────────────────────────────────────────────────────────
+    - 'TL_Count_Label As label':
+        Properties:
+          Text: =Text(CountRows(TL_Task_Gallery.AllItems)) & " tasks"
+          X: =16
+          Y: =202
+          Width: =Parent.Width - 100
+          Height: =24
+          Color: =gblColTextSecond
+          Size: =12
+
+    - 'TL_Add_Btn As button':
+        Properties:
+          Text: ="+ New Task"
+          X: =Parent.Width - 106
+          Y: =200
+          Width: =100
+          Height: =28
+          Fill: =gblColBHPRed
+          Color: =RGBA(255, 255, 255, 1)
+          BorderColor: =RGBA(0, 0, 0, 0)
+          Size: =12
+          RadiusTopLeft: =6
+          RadiusTopRight: =6
+          RadiusBottomLeft: =6
+          RadiusBottomRight: =6
+          OnSelect: =Navigate(AddTaskScreen, ScreenTransition.Fade)
+
+    # ── TASK GALLERY ─────────────────────────────────────────────────────────
+    - 'TL_Task_Gallery As gallery':
+        Properties:
+          Items: |
+            =SortByColumns(
+                Filter(EnabledTasks,
+                    // Site filter
+                    Site = gblCurrentSite &&
+                    // Department filter
+                    (gblFilterDept = "All Departments" || gblFilterDept = "" || Department = gblFilterDept) &&
+                    // Status filter
+                    (gblFilterStatus = "All Status" || gblFilterStatus = "" || Status = gblFilterStatus) &&
+                    // Quick filter chips
+                    (
+                        gblQuickFilter = "" ||
+                        (gblQuickFilter = "Overdue"       && PlannedEndDate < Today() && Status <> "Complete") ||
+                        (gblQuickFilter = "Today"         && PlannedStartDate <= Today() && PlannedEndDate >= Today()) ||
+                        (gblQuickFilter = "This Week"     && PlannedStartDate <= DateAdd(Today(), 7 - Weekday(Today()), Days) && PlannedEndDate >= Today()) ||
+                        (gblQuickFilter = "Critical Path" && IsOnCriticalPath = true)
+                    )
+                ),
+                "PlannedEndDate", SortOrder.Ascending
+            )
+          X: =0
+          Y: =228
+          Width: =Parent.Width
+          Height: =Parent.Height - 284
+          TemplateSize: =100
+          TemplatePadding: =0
+          ShowScrollbar: =true
+          Layout: =Layout.Vertical
+          OnSelect: |
+            =Set(gblSelectedTask, ThisItem);
+            Navigate(TaskDetailScreen, ScreenTransition.Fade)
+        Children:
+        - 'TL_Task_Card_Rect As rectangle':
+            Properties:
+              X: =16
+              Y: =6
+              Width: =Parent.TemplateWidth - 32
+              Height: =88
+              Fill: =gblColCardBg
+              BorderColor: =gblColBorder
+              BorderThickness: =1
+              RadiusTopLeft: =8
+              RadiusTopRight: =8
+              RadiusBottomLeft: =8
+              RadiusBottomRight: =8
+        - 'TL_Task_StatusBar As rectangle':
+            Properties:
+              X: =16
+              Y: =6
+              Width: =6
+              Height: =88
+              Fill: |
+                =Switch(ThisItem.Status,
+                    "Complete",        gblColGreen,
+                    "In Progress",     gblColAmber,
+                    "Delayed",         gblColRed,
+                    "Not Started",     If(ThisItem.PlannedEndDate < Today(), gblColRed, gblColBorder),
+                    gblColBorder
+                )
+              RadiusTopLeft: =8
+              RadiusBottomLeft: =8
+        - 'TL_Task_Title As label':
+            Properties:
+              Text: =ThisItem.Title
+              X: =30
+              Y: =14
+              Width: =Parent.TemplateWidth - 156
+              Height: =28
+              Color: =gblColTextPrimary
+              FontWeight: =FontWeight.Bold
+              Size: =13
+              Overflow: =Overflow.Hidden
+        - 'TL_Task_Type As label':
+            Properties:
+              Text: =LookUp(colTaskTypes, ID = ThisItem.TaskTypeId, Title)
+              X: =30
+              Y: =42
+              Width: =Parent.TemplateWidth - 156
+              Height: =22
+              Color: =gblColTextSecond
+              Size: =11
+        - 'TL_Task_Dept As label':
+            Properties:
+              Text: =ThisItem.Department
+              X: =30
+              Y: =62
+              Width: =Parent.TemplateWidth - 156
+              Height: =22
+              Color: =gblColTextSecond
+              Size: =11
+        - 'TL_Task_StatusChip As rectangle':
+            Properties:
+              X: =Parent.TemplateWidth - 140
+              Y: =14
+              Width: =108
+              Height: =24
+              Fill: |
+                =Switch(ThisItem.Status,
+                    "Complete",     ColorFade(gblColGreen, 0.85),
+                    "In Progress",  ColorFade(gblColAmber, 0.85),
+                    "Delayed",      ColorFade(gblColRed,   0.85),
+                    ColorFade(gblColBorder, 0.5)
+                )
+              RadiusTopLeft: =12
+              RadiusTopRight: =12
+              RadiusBottomLeft: =12
+              RadiusBottomRight: =12
+        - 'TL_Task_StatusText As label':
+            Properties:
+              Text: =ThisItem.Status
+              X: =Parent.TemplateWidth - 140
+              Y: =14
+              Width: =108
+              Height: =24
+              Align: =Align.Center
+              Size: =11
+              FontWeight: =FontWeight.Semibold
+              Color: |
+                =Switch(ThisItem.Status,
+                    "Complete",     gblColGreen,
+                    "In Progress",  gblColAmber,
+                    "Delayed",      gblColRed,
+                    gblColTextSecond
+                )
+        - 'TL_Task_DueDateLabel As label':
+            Properties:
+              Text: ="Due: " & Text(ThisItem.PlannedEndDate, "[$-en-AU]dd mmm")
+              X: =Parent.TemplateWidth - 140
+              Y: =46
+              Width: =108
+              Height: =20
+              Align: =Align.Right
+              Size: =11
+              Color: =If(ThisItem.PlannedEndDate < Today() && ThisItem.Status <> "Complete", gblColRed, gblColTextSecond)
+        - 'TL_Task_CritPath As rectangle':
+            Properties:
+              X: =Parent.TemplateWidth - 140
+              Y: =68
+              Width: =108
+              Height: =20
+              Fill: =If(ThisItem.IsOnCriticalPath, ColorFade(gblColBHPRed, 0.85), RGBA(0,0,0,0))
+              RadiusTopLeft: =10
+              RadiusTopRight: =10
+              RadiusBottomLeft: =10
+              RadiusBottomRight: =10
+        - 'TL_Task_CritPathLabel As label':
+            Properties:
+              Text: =If(ThisItem.IsOnCriticalPath, "Critical Path", "")
+              X: =Parent.TemplateWidth - 140
+              Y: =68
+              Width: =108
+              Height: =20
+              Align: =Align.Center
+              Size: =10
+              Color: =gblColBHPRed
+              FontWeight: =FontWeight.Bold
+
+    # ── BOTTOM NAVIGATION ─────────────────────────────────────────────────────
+    - 'TL_NavBar As rectangle':
+        Properties:
+          X: =0
+          Y: =Parent.Height - 56
+          Width: =Parent.Width
+          Height: =56
+          Fill: =gblColNavBg
+
+    - 'TL_Nav_Home As button':
+        Properties:
+          Text: ="Home"
+          X: =0
+          Y: =Parent.Height - 56
+          Width: =Parent.Width / 4
+          Height: =56
+          Color: =gblColNavInactive
+          Fill: =RGBA(0,0,0,0)
+          BorderColor: =RGBA(0,0,0,0)
+          Size: =10
+          OnSelect: =Navigate(HomeScreen, ScreenTransition.None)
+
+    - 'TL_Nav_Tasks As button':
+        Properties:
+          Text: ="All Tasks"
+          X: =Parent.Width / 4
+          Y: =Parent.Height - 56
+          Width: =Parent.Width / 4
+          Height: =56
+          Color: =gblColNavActive
+          Fill: =RGBA(0,0,0,0)
+          BorderColor: =RGBA(0,0,0,0)
+          Size: =10
+          FontWeight: =FontWeight.Bold
+          OnSelect: =Navigate(TaskListScreen, ScreenTransition.None)
+
+    - 'TL_Nav_Add As button':
+        Properties:
+          Text: ="Add Task"
+          X: =Parent.Width / 2
+          Y: =Parent.Height - 56
+          Width: =Parent.Width / 4
+          Height: =56
+          Color: =gblColNavInactive
+          Fill: =RGBA(0,0,0,0)
+          BorderColor: =RGBA(0,0,0,0)
+          Size: =10
+          OnSelect: =Navigate(AddTaskScreen, ScreenTransition.None)
+
+    - 'TL_Nav_PDCA As button':
+        Properties:
+          Text: ="PDCA"
+          X: =3 * Parent.Width / 4
+          Y: =Parent.Height - 56
+          Width: =Parent.Width / 4
+          Height: =56
+          Color: =gblColNavInactive
+          Fill: =RGBA(0,0,0,0)
+          BorderColor: =RGBA(0,0,0,0)
+          Size: =10
+          OnSelect: =Navigate(PDCAScreen, ScreenTransition.None)

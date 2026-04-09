@@ -1,0 +1,54 @@
+{
+  "listTitle": "DelayReasons",
+  "listDescription": "Standardised delay reason codes for BMA enabling task management. Used for PDCA analysis — consistent codes across all sites and departments are critical for meaningful Pareto analysis.",
+  "templateType": 100,
+  "columns": [
+    {
+      "internalName": "Title",
+      "displayName": "Delay Reason",
+      "type": "Text",
+      "required": true,
+      "maxLength": 100
+    },
+    {
+      "internalName": "Category",
+      "displayName": "Category",
+      "type": "Choice",
+      "required": true,
+      "choices": [
+        "Weather",
+        "Access",
+        "Equipment",
+        "People",
+        "Sequential Dependency",
+        "Unplanned Priority",
+        "Scope Change",
+        "Safety",
+        "Other"
+      ]
+    },
+    {
+      "internalName": "Description",
+      "displayName": "Description",
+      "type": "Note",
+      "required": true,
+      "richText": false,
+      "description": "Guidance on when to use this reason code — prevents misclassification"
+    },
+    {
+      "internalName": "IsControllable",
+      "displayName": "Controllable Delay",
+      "type": "Boolean",
+      "required": false,
+      "defaultValue": true,
+      "description": "True if BMA has control over this delay type (process improvement target). False for external factors (weather, regulatory)."
+    },
+    {
+      "internalName": "IsActive",
+      "displayName": "Active",
+      "type": "Boolean",
+      "required": false,
+      "defaultValue": true
+    }
+  ]
+}

@@ -1,0 +1,122 @@
+{
+  "listTitle": "EquipmentMovements",
+  "listDescription": "Major equipment movement schedule — imported manually from Spry (Micromine) by the mine planner. These are the anchor events that enabling tasks must precede. All enabling tasks are linked to at least one equipment movement.",
+  "templateType": 100,
+  "enableVersioning": true,
+  "columns": [
+    {
+      "internalName": "Title",
+      "displayName": "Movement Description",
+      "type": "Text",
+      "required": true,
+      "maxLength": 255,
+      "description": "e.g. 'Shovel 2 — Move to Pit 9 Block 3 North', 'DL1 Walk — East Highwall to West Bench'"
+    },
+    {
+      "internalName": "Site",
+      "displayName": "Mine Site",
+      "type": "Choice",
+      "required": true,
+      "choices": ["Saraji", "Caval Ridge"]
+    },
+    {
+      "internalName": "EquipmentType",
+      "displayName": "Equipment Type",
+      "type": "Choice",
+      "required": true,
+      "choices": [
+        "Shovel",
+        "Excavator",
+        "Dragline",
+        "Truck Fleet",
+        "Drill Rig",
+        "Dozer",
+        "Grader",
+        "Other"
+      ]
+    },
+    {
+      "internalName": "EquipmentID",
+      "displayName": "Equipment ID",
+      "type": "Text",
+      "required": true,
+      "maxLength": 50,
+      "description": "Equipment fleet number (e.g. SH02, DL1, EX14)"
+    },
+    {
+      "internalName": "PlannedMoveDate",
+      "displayName": "Planned Move Date",
+      "type": "DateTime",
+      "required": true,
+      "format": "DateOnly",
+      "description": "Date equipment is planned to move — the hard deadline driving enabling task completion"
+    },
+    {
+      "internalName": "FromLocation",
+      "displayName": "From Location",
+      "type": "Text",
+      "required": false,
+      "maxLength": 200
+    },
+    {
+      "internalName": "ToLocation",
+      "displayName": "To Location",
+      "type": "Text",
+      "required": false,
+      "maxLength": 200
+    },
+    {
+      "internalName": "PitBlock",
+      "displayName": "Pit / Block",
+      "type": "Text",
+      "required": false,
+      "maxLength": 100
+    },
+    {
+      "internalName": "MovementStatus",
+      "displayName": "Movement Status",
+      "type": "Choice",
+      "required": true,
+      "defaultValue": "Planned",
+      "choices": [
+        "Planned",
+        "Confirmed — Enabling Complete",
+        "At Risk — Enabling Delayed",
+        "Executed",
+        "Deferred",
+        "Cancelled"
+      ]
+    },
+    {
+      "internalName": "SpryReference",
+      "displayName": "Spry Reference",
+      "type": "Text",
+      "required": false,
+      "maxLength": 100,
+      "description": "Reference ID from the Spry (Micromine) mine plan for traceability back to source schedule"
+    },
+    {
+      "internalName": "EnabledTaskCount",
+      "displayName": "Enabling Tasks Linked",
+      "type": "Calculated",
+      "formula": "0",
+      "outputType": "Number",
+      "description": "Populated via Power Automate — total number of enabling tasks linked to this movement"
+    },
+    {
+      "internalName": "PlannerNotes",
+      "displayName": "Planner Notes",
+      "type": "Note",
+      "required": false,
+      "richText": false
+    }
+  ],
+  "views": [
+    {
+      "viewTitle": "Upcoming Movements",
+      "viewQuery": "<And><Neq><FieldRef Name='MovementStatus'/><Value Type='Choice'>Executed</Value></Neq><Geq><FieldRef Name='PlannedMoveDate'/><Value Type='DateTime'><Today/></Value></Geq></And><OrderBy><FieldRef Name='PlannedMoveDate'/></OrderBy>",
+      "viewFields": ["Title", "Site", "EquipmentType", "EquipmentID", "PlannedMoveDate", "MovementStatus"],
+      "defaultView": true
+    }
+  ]
+}

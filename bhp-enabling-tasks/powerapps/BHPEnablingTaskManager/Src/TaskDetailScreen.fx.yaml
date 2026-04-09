@@ -1,0 +1,464 @@
+- 'TaskDetailScreen As screen':
+    Properties:
+      Fill: =gblColPageBg
+      OnVisible: |
+        =// Refresh the selected task to get latest data
+        Set(gblSelectedTask, LookUp(EnabledTasks, ID = gblSelectedTask.ID))
+    Children:
+
+    # ── HEADER ────────────────────────────────────────────────────────────────
+    - 'TD_Header_Rect As rectangle':
+        Properties:
+          X: =0
+          Y: =0
+          Width: =Parent.Width
+          Height: =90
+          Fill: =gblColHeaderBg
+
+    - 'TD_Back_Btn As button':
+        Properties:
+          Text: ="< Tasks"
+          X: =8
+          Y: =30
+          Width: =80
+          Height: =36
+          Color: =RGBA(255, 255, 255, 1)
+          Fill: =RGBA(0, 0, 0, 0)
+          BorderColor: =RGBA(0, 0, 0, 0)
+          Size: =13
+          OnSelect: =Navigate(TaskListScreen, ScreenTransition.Fade)
+
+    - 'TD_Header_Title As label':
+        Properties:
+          Text: ="Task Detail"
+          X: =80
+          Y: =30
+          Width: =Parent.Width - 96
+          Height: =36
+          Color: =RGBA(255, 255, 255, 1)
+          FontWeight: =FontWeight.Bold
+          Size: =16
+          VerticalAlign: =VerticalAlign.Middle
+
+    # ── STATUS BANNER ─────────────────────────────────────────────────────────
+    - 'TD_Status_Banner As rectangle':
+        Properties:
+          X: =0
+          Y: =90
+          Width: =Parent.Width
+          Height: =48
+          Fill: |
+            =Switch(gblSelectedTask.Status,
+                "Complete",     gblColGreen,
+                "In Progress",  gblColAmber,
+                "Delayed",      gblColRed,
+                "Not Started",  If(gblSelectedTask.PlannedEndDate < Today(), gblColRed, gblColBlue),
+                gblColBlue
+            )
+
+    - 'TD_Status_Text As label':
+        Properties:
+          Text: |
+            =gblSelectedTask.Status &
+            If(gblSelectedTask.IsOnCriticalPath, "  |  CRITICAL PATH", "")
+          X: =16
+          Y: =90
+          Width: =Parent.Width - 32
+          Height: =48
+          Color: =RGBA(255, 255, 255, 1)
+          FontWeight: =FontWeight.Bold
+          Size: =14
+          VerticalAlign: =VerticalAlign.Middle
+
+    # ── SCROLLABLE CONTENT ────────────────────────────────────────────────────
+    # Task Name
+    - 'TD_Name As label':
+        Properties:
+          Text: =gblSelectedTask.Title
+          X: =16
+          Y: =154
+          Width: =Parent.Width - 32
+          Height: =If(Len(gblSelectedTask.Title) > 50, 56, 36)
+          Color: =gblColTextPrimary
+          FontWeight: =FontWeight.Bold
+          Size: =17
+          Overflow: =Overflow.Hidden
+
+    # Task Type + Category
+    - 'TD_TypeRow As label':
+        Properties:
+          Text: |
+            =LookUp(colTaskTypes, ID = gblSelectedTask.TaskTypeId, Title) &
+            "  ·  " &
+            LookUp(colTaskTypes, ID = gblSelectedTask.TaskTypeId, Category)
+          X: =16
+          Y: =210
+          Width: =Parent.Width - 32
+          Height: =24
+          Color: =gblColTextSecond
+          Size: =12
+
+    # Department chip
+    - 'TD_Dept_Chip_Rect As rectangle':
+        Properties:
+          X: =16
+          Y: =240
+          Width: =220
+          Height: =28
+          Fill: =ColorFade(gblColBlue, 0.85)
+          RadiusTopLeft: =14
+          RadiusTopRight: =14
+          RadiusBottomLeft: =14
+          RadiusBottomRight: =14
+    - 'TD_Dept_Label As label':
+        Properties:
+          Text: =gblSelectedTask.Department
+          X: =16
+          Y: =240
+          Width: =220
+          Height: =28
+          Align: =Align.Center
+          Color: =gblColBlue
+          FontWeight: =FontWeight.Semibold
+          Size: =12
+
+    # Site chip
+    - 'TD_Site_Chip_Rect As rectangle':
+        Properties:
+          X: =244
+          Y: =240
+          Width: =90
+          Height: =28
+          Fill: =ColorFade(gblColHeaderBg, 0.85)
+          RadiusTopLeft: =14
+          RadiusTopRight: =14
+          RadiusBottomLeft: =14
+          RadiusBottomRight: =14
+    - 'TD_Site_Label As label':
+        Properties:
+          Text: =gblSelectedTask.Site
+          X: =244
+          Y: =240
+          Width: =90
+          Height: =28
+          Align: =Align.Center
+          Color: =gblColTextPrimary
+          FontWeight: =FontWeight.Semibold
+          Size: =12
+
+    # Divider
+    - 'TD_Div1 As rectangle':
+        Properties:
+          X: =16
+          Y: =278
+          Width: =Parent.Width - 32
+          Height: =1
+          Fill: =gblColBorder
+
+    # ── DATES SECTION ─────────────────────────────────────────────────────────
+    - 'TD_Dates_Card As rectangle':
+        Properties:
+          X: =16
+          Y: =286
+          Width: =Parent.Width - 32
+          Height: =110
+          Fill: =gblColCardBg
+          BorderColor: =gblColBorder
+          BorderThickness: =1
+          RadiusTopLeft: =8
+          RadiusTopRight: =8
+          RadiusBottomLeft: =8
+          RadiusBottomRight: =8
+
+    - 'TD_Dates_Header As label':
+        Properties:
+          Text: ="Schedule"
+          X: =28
+          Y: =294
+          Width: =200
+          Height: =22
+          Color: =gblColTextSecond
+          Size: =11
+          FontWeight: =FontWeight.Semibold
+
+    # Column headers
+    - 'TD_Dates_PlanHdr As label':
+        Properties:
+          Text: ="Planned"
+          X: =28
+          Y: =316
+          Width: =(Parent.Width - 64) / 3
+          Height: =20
+          Color: =gblColTextSecond
+          Size: =11
+    - 'TD_Dates_ActualHdr As label':
+        Properties:
+          Text: ="Actual"
+          X: =28 + (Parent.Width - 64) / 3
+          Y: =316
+          Width: =(Parent.Width - 64) / 3
+          Height: =20
+          Color: =gblColTextSecond
+          Size: =11
+    - 'TD_Dates_VarHdr As label':
+        Properties:
+          Text: ="Variance"
+          X: =28 + 2 * (Parent.Width - 64) / 3
+          Y: =316
+          Width: =(Parent.Width - 64) / 3
+          Height: =20
+          Color: =gblColTextSecond
+          Size: =11
+          Align: =Align.Right
+
+    # Start dates
+    - 'TD_Dates_PlanStart As label':
+        Properties:
+          Text: =Text(gblSelectedTask.PlannedStartDate, "[$-en-AU]dd mmm")
+          X: =28
+          Y: =338
+          Width: =(Parent.Width - 64) / 3
+          Height: =24
+          Color: =gblColTextPrimary
+          FontWeight: =FontWeight.Semibold
+          Size: =13
+    - 'TD_Dates_ActualStart As label':
+        Properties:
+          Text: =If(IsBlank(gblSelectedTask.ActualStartDate), "—", Text(gblSelectedTask.ActualStartDate, "[$-en-AU]dd mmm"))
+          X: =28 + (Parent.Width - 64) / 3
+          Y: =338
+          Width: =(Parent.Width - 64) / 3
+          Height: =24
+          Color: =gblColTextPrimary
+          FontWeight: =FontWeight.Semibold
+          Size: =13
+
+    # Duration row
+    - 'TD_Dates_DurLabel As label':
+        Properties:
+          Text: =Text(gblSelectedTask.PlannedDurationDays, "0.#") & "d planned"
+          X: =28
+          Y: =362
+          Width: =(Parent.Width - 64) / 3
+          Height: =20
+          Color: =gblColTextSecond
+          Size: =11
+    - 'TD_Dates_DurActual As label':
+        Properties:
+          Text: |
+            =If(
+                !IsBlank(gblSelectedTask.ActualStartDate) && !IsBlank(gblSelectedTask.ActualEndDate),
+                Text(DateDiff(gblSelectedTask.ActualStartDate, gblSelectedTask.ActualEndDate, Days), "0.#") & "d actual",
+                "In progress"
+            )
+          X: =28 + (Parent.Width - 64) / 3
+          Y: =362
+          Width: =(Parent.Width - 64) / 3
+          Height: =20
+          Color: =gblColTextSecond
+          Size: =11
+    - 'TD_Dates_Variance As label':
+        Properties:
+          Text: |
+            =If(
+                gblSelectedTask.Status = "Complete" && !IsBlank(gblSelectedTask.ActualEndDate),
+                If(
+                    DateDiff(gblSelectedTask.PlannedEndDate, gblSelectedTask.ActualEndDate, Days) > 0,
+                    "+" & Text(DateDiff(gblSelectedTask.PlannedEndDate, gblSelectedTask.ActualEndDate, Days)) & "d late",
+                    If(
+                        DateDiff(gblSelectedTask.PlannedEndDate, gblSelectedTask.ActualEndDate, Days) < 0,
+                        Text(DateDiff(gblSelectedTask.PlannedEndDate, gblSelectedTask.ActualEndDate, Days)) & "d early",
+                        "On time"
+                    )
+                ),
+                If(
+                    gblSelectedTask.PlannedEndDate < Today() && gblSelectedTask.Status <> "Complete",
+                    "+" & Text(DateDiff(gblSelectedTask.PlannedEndDate, Today(), Days)) & "d overdue",
+                    Text(DateDiff(Today(), gblSelectedTask.PlannedEndDate, Days)) & "d remaining"
+                )
+            )
+          X: =28 + 2 * (Parent.Width - 64) / 3
+          Y: =344
+          Width: =(Parent.Width - 64) / 3
+          Height: =44
+          Align: =Align.Right
+          FontWeight: =FontWeight.Bold
+          Size: =14
+          Color: |
+            =If(
+                gblSelectedTask.Status = "Complete" && DateDiff(gblSelectedTask.PlannedEndDate, gblSelectedTask.ActualEndDate, Days) <= 0,
+                gblColGreen,
+                If(
+                    gblSelectedTask.PlannedEndDate < Today() && gblSelectedTask.Status <> "Complete",
+                    gblColRed,
+                    gblColAmber
+                )
+            )
+
+    # ── LINKED EQUIPMENT MOVEMENT ─────────────────────────────────────────────
+    - 'TD_Equip_Label As label':
+        Properties:
+          Text: ="Linked Equipment Movement"
+          X: =16
+          Y: =408
+          Width: =Parent.Width - 32
+          Height: =20
+          Color: =gblColTextSecond
+          Size: =11
+          FontWeight: =FontWeight.Semibold
+
+    - 'TD_Equip_Card As rectangle':
+        Properties:
+          X: =16
+          Y: =430
+          Width: =Parent.Width - 32
+          Height: =56
+          Fill: =If(IsBlank(gblSelectedTask.EquipmentMovementId), RGBA(0,0,0,0), gblColCardBg)
+          BorderColor: =If(IsBlank(gblSelectedTask.EquipmentMovementId), RGBA(0,0,0,0), gblColBorder)
+          BorderThickness: =If(IsBlank(gblSelectedTask.EquipmentMovementId), 0, 1)
+          RadiusTopLeft: =8
+          RadiusTopRight: =8
+          RadiusBottomLeft: =8
+          RadiusBottomRight: =8
+
+    - 'TD_Equip_Title As label':
+        Properties:
+          Text: |
+            =If(
+                IsBlank(gblSelectedTask.EquipmentMovementId),
+                "No equipment movement linked",
+                LookUp(colEquipmentMovements, ID = gblSelectedTask.EquipmentMovementId, EquipmentID & " — " & Title)
+            )
+          X: =28
+          Y: =438
+          Width: =Parent.Width - 60
+          Height: =24
+          Color: =If(IsBlank(gblSelectedTask.EquipmentMovementId), gblColTextSecond, gblColTextPrimary)
+          FontWeight: =FontWeight.Semibold
+          Size: =13
+
+    - 'TD_Equip_Date As label':
+        Properties:
+          Text: |
+            =If(
+                !IsBlank(gblSelectedTask.EquipmentMovementId),
+                "Move date: " & Text(LookUp(colEquipmentMovements, ID = gblSelectedTask.EquipmentMovementId, PlannedMoveDate), "[$-en-AU]dd mmm yyyy"),
+                ""
+            )
+          X: =28
+          Y: =462
+          Width: =Parent.Width - 60
+          Height: =20
+          Color: =gblColTextSecond
+          Size: =11
+
+    # ── DELAY REASON (shown only if delayed) ──────────────────────────────────
+    - 'TD_Delay_Card As rectangle':
+        Properties:
+          X: =16
+          Y: =498
+          Width: =Parent.Width - 32
+          Height: =If(gblSelectedTask.Status = "Delayed" || gblSelectedTask.Status = "Partially Complete", 80, 0)
+          Visible: =gblSelectedTask.Status = "Delayed" || gblSelectedTask.Status = "Partially Complete"
+          Fill: =ColorFade(gblColRed, 0.9)
+          BorderColor: =gblColRed
+          BorderThickness: =1
+          RadiusTopLeft: =8
+          RadiusTopRight: =8
+          RadiusBottomLeft: =8
+          RadiusBottomRight: =8
+
+    - 'TD_Delay_Header As label':
+        Properties:
+          Text: ="Delay Reason"
+          X: =28
+          Y: =506
+          Width: =200
+          Height: =20
+          Color: =gblColRed
+          FontWeight: =FontWeight.Bold
+          Size: =12
+          Visible: =gblSelectedTask.Status = "Delayed" || gblSelectedTask.Status = "Partially Complete"
+
+    - 'TD_Delay_Reason As label':
+        Properties:
+          Text: =LookUp(colDelayReasons, ID = gblSelectedTask.DelayReasonId, Title)
+          X: =28
+          Y: =526
+          Width: =Parent.Width - 60
+          Height: =24
+          Color: =gblColTextPrimary
+          FontWeight: =FontWeight.Semibold
+          Size: =13
+          Visible: =gblSelectedTask.Status = "Delayed" || gblSelectedTask.Status = "Partially Complete"
+
+    - 'TD_Delay_Notes As label':
+        Properties:
+          Text: =gblSelectedTask.DelayNotes
+          X: =28
+          Y: =550
+          Width: =Parent.Width - 60
+          Height: =24
+          Color: =gblColTextSecond
+          Size: =12
+          Visible: =gblSelectedTask.Status = "Delayed" || gblSelectedTask.Status = "Partially Complete"
+
+    # ── DONE DEFINITION ───────────────────────────────────────────────────────
+    - 'TD_Done_Header As label':
+        Properties:
+          Text: ="Done Definition"
+          X: =16
+          Y: =If(gblSelectedTask.Status = "Delayed" || gblSelectedTask.Status = "Partially Complete", 590, 508)
+          Width: =Parent.Width - 32
+          Height: =20
+          Color: =gblColTextSecond
+          FontWeight: =FontWeight.Semibold
+          Size: =11
+
+    - 'TD_Done_Text As label':
+        Properties:
+          Text: =LookUp(colTaskTypes, ID = gblSelectedTask.TaskTypeId, DoneDefinition)
+          X: =16
+          Y: =If(gblSelectedTask.Status = "Delayed" || gblSelectedTask.Status = "Partially Complete", 610, 530)
+          Width: =Parent.Width - 32
+          Height: =80
+          Color: =gblColTextPrimary
+          Size: =12
+          Overflow: =Overflow.Hidden
+
+    # ── ACTION BUTTONS ────────────────────────────────────────────────────────
+    - 'TD_Complete_Btn As button':
+        Properties:
+          Text: ="Mark Complete / Update"
+          X: =16
+          Y: =Parent.Height - 108
+          Width: =Parent.Width - 32
+          Height: =44
+          Fill: =gblColBHPRed
+          Color: =RGBA(255, 255, 255, 1)
+          BorderColor: =RGBA(0, 0, 0, 0)
+          FontWeight: =FontWeight.Bold
+          Size: =14
+          RadiusTopLeft: =8
+          RadiusTopRight: =8
+          RadiusBottomLeft: =8
+          RadiusBottomRight: =8
+          OnSelect: =Navigate(CompleteTaskScreen, ScreenTransition.Cover)
+
+    - 'TD_Edit_Btn As button':
+        Properties:
+          Text: ="Edit Task Details"
+          X: =16
+          Y: =Parent.Height - 58
+          Width: =Parent.Width - 32
+          Height: =36
+          Fill: =gblColCardBg
+          Color: =gblColTextPrimary
+          BorderColor: =gblColBorder
+          BorderThickness: =1
+          Size: =13
+          RadiusTopLeft: =8
+          RadiusTopRight: =8
+          RadiusBottomLeft: =8
+          RadiusBottomRight: =8
+          OnSelect: =Navigate(AddTaskScreen, ScreenTransition.Cover)

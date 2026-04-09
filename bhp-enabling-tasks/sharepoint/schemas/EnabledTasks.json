@@ -1,0 +1,225 @@
+{
+  "listTitle": "EnabledTasks",
+  "listDescription": "BHP BMA enabling task schedule — records all enabling tasks required to support major equipment movements across Saraji and Caval Ridge mine sites.",
+  "templateType": 100,
+  "enableVersioning": true,
+  "columns": [
+    {
+      "internalName": "Title",
+      "displayName": "Task Name",
+      "type": "Text",
+      "required": true,
+      "maxLength": 255,
+      "description": "Short descriptive name for this enabling task instance (e.g. 'Cut North Ramp — Pit 9 Block 3')"
+    },
+    {
+      "internalName": "TaskTypeId",
+      "displayName": "Task Type",
+      "type": "Lookup",
+      "required": true,
+      "lookupListTitle": "TaskTypes",
+      "lookupFieldName": "Title",
+      "description": "Standardised task type from the BMA enabling task catalogue"
+    },
+    {
+      "internalName": "Department",
+      "displayName": "Responsible Department",
+      "type": "Choice",
+      "required": true,
+      "choices": [
+        "Mine Services - Pump Crew",
+        "Mine Services - Road Crew",
+        "Production - Truck & Shovel",
+        "Drill & Blast",
+        "Draglines",
+        "Rehabilitation",
+        "Survey",
+        "Geotechnical"
+      ],
+      "description": "Department accountable for completing this enabling task"
+    },
+    {
+      "internalName": "Site",
+      "displayName": "Mine Site",
+      "type": "Choice",
+      "required": true,
+      "choices": ["Saraji", "Caval Ridge"],
+      "description": "BMA mine site where this task is to be performed"
+    },
+    {
+      "internalName": "PitBlock",
+      "displayName": "Pit / Block",
+      "type": "Text",
+      "required": false,
+      "maxLength": 100,
+      "description": "Pit and block reference (e.g. Pit 9 Block 3, North Highwall)"
+    },
+    {
+      "internalName": "PlannedStartDate",
+      "displayName": "Planned Start Date",
+      "type": "DateTime",
+      "required": true,
+      "format": "DateOnly",
+      "description": "Date the enabling task is planned to commence"
+    },
+    {
+      "internalName": "PlannedEndDate",
+      "displayName": "Planned End Date",
+      "type": "DateTime",
+      "required": true,
+      "format": "DateOnly",
+      "description": "Date the enabling task must be completed by"
+    },
+    {
+      "internalName": "PlannedDurationDays",
+      "displayName": "Planned Duration (Days)",
+      "type": "Number",
+      "required": true,
+      "min": 0.5,
+      "decimalPlaces": 1,
+      "description": "Expected duration in days (from TaskTypes P50 standard — editable by planner)"
+    },
+    {
+      "internalName": "ActualStartDate",
+      "displayName": "Actual Start Date",
+      "type": "DateTime",
+      "required": false,
+      "format": "DateOnly",
+      "description": "Date the enabling task actually commenced"
+    },
+    {
+      "internalName": "ActualEndDate",
+      "displayName": "Actual End Date",
+      "type": "DateTime",
+      "required": false,
+      "format": "DateOnly",
+      "description": "Date the enabling task was actually completed"
+    },
+    {
+      "internalName": "Status",
+      "displayName": "Status",
+      "type": "Choice",
+      "required": true,
+      "defaultValue": "Not Started",
+      "choices": [
+        "Not Started",
+        "In Progress",
+        "Complete",
+        "Delayed",
+        "Partially Complete",
+        "Cancelled"
+      ],
+      "description": "Current status of the enabling task"
+    },
+    {
+      "internalName": "PriorityLevel",
+      "displayName": "Priority",
+      "type": "Choice",
+      "required": true,
+      "defaultValue": "Medium",
+      "choices": ["Critical", "High", "Medium", "Low"],
+      "description": "Priority level — Critical means this task blocks a major equipment movement"
+    },
+    {
+      "internalName": "IsOnCriticalPath",
+      "displayName": "Critical Path",
+      "type": "Boolean",
+      "required": false,
+      "defaultValue": false,
+      "description": "True if this enabling task is on the critical path to the next major equipment movement"
+    },
+    {
+      "internalName": "DelayReasonId",
+      "displayName": "Delay Reason",
+      "type": "Lookup",
+      "required": false,
+      "lookupListTitle": "DelayReasons",
+      "lookupFieldName": "Title",
+      "description": "Standardised delay reason — required when Status is Delayed"
+    },
+    {
+      "internalName": "DelayNotes",
+      "displayName": "Delay / Completion Notes",
+      "type": "Note",
+      "required": false,
+      "richText": false,
+      "description": "Free-text notes on delay cause, partial completion, or handover information"
+    },
+    {
+      "internalName": "EquipmentMovementId",
+      "displayName": "Linked Equipment Movement",
+      "type": "Lookup",
+      "required": false,
+      "lookupListTitle": "EquipmentMovements",
+      "lookupFieldName": "Title",
+      "description": "The major equipment movement this enabling task enables"
+    },
+    {
+      "internalName": "ShiftType",
+      "displayName": "Shift",
+      "type": "Choice",
+      "required": false,
+      "choices": ["Day", "Night", "Afternoon", "Multi-Shift"],
+      "description": "Shift during which the task is to be executed"
+    },
+    {
+      "internalName": "PlannerEmail",
+      "displayName": "Assigned Planner",
+      "type": "User",
+      "required": true,
+      "description": "Mine planner responsible for scheduling this enabling task"
+    },
+    {
+      "internalName": "SupervisorEmail",
+      "displayName": "Completing Supervisor",
+      "type": "User",
+      "required": false,
+      "description": "Supervisor who confirmed task completion"
+    },
+    {
+      "internalName": "IsUnplanned",
+      "displayName": "Unplanned Task",
+      "type": "Boolean",
+      "required": false,
+      "defaultValue": false,
+      "description": "True if this task was not on the original plan — captured during shift log"
+    },
+    {
+      "internalName": "VarianceDays",
+      "displayName": "Schedule Variance (Days)",
+      "type": "Calculated",
+      "formula": "=IF(ISBLANK([Actual End Date]),DATEDIF(TODAY(),[Planned End Date],\"D\")*-1,DATEDIF([Planned End Date],[Actual End Date],\"D\"))",
+      "outputType": "Number",
+      "description": "Days variance: positive = late, negative = early. Calculated from planned vs actual end date."
+    }
+  ],
+  "views": [
+    {
+      "viewTitle": "Today's Tasks",
+      "viewQuery": "<Where><Eq><FieldRef Name='PlannedStartDate'/><Value Type='DateTime'><Today/></Value></Eq></Where>",
+      "viewFields": ["Title", "TaskTypeId", "Department", "Status", "PriorityLevel", "IsOnCriticalPath", "PlannedEndDate", "EquipmentMovementId"],
+      "defaultView": true
+    },
+    {
+      "viewTitle": "Overdue Tasks",
+      "viewQuery": "<And><Neq><FieldRef Name='Status'/><Value Type='Choice'>Complete</Value></Neq><Lt><FieldRef Name='PlannedEndDate'/><Value Type='DateTime'><Today/></Value></Lt></And>",
+      "viewFields": ["Title", "Department", "Status", "PlannedEndDate", "DelayReasonId", "VarianceDays"]
+    },
+    {
+      "viewTitle": "By Department",
+      "viewQuery": "<OrderBy><FieldRef Name='Department'/><FieldRef Name='PlannedStartDate'/></OrderBy>",
+      "viewFields": ["Title", "TaskTypeId", "Department", "Status", "PlannedStartDate", "PlannedEndDate", "VarianceDays", "IsOnCriticalPath"],
+      "groupBy": "Department"
+    },
+    {
+      "viewTitle": "This Week",
+      "viewQuery": "<And><Geq><FieldRef Name='PlannedStartDate'/><Value Type='DateTime'><Week/></Value></Geq><Leq><FieldRef Name='PlannedEndDate'/><Value Type='DateTime'><Week/></Value></Leq></And>",
+      "viewFields": ["Title", "Department", "Status", "PlannedStartDate", "PlannedEndDate", "PriorityLevel", "IsOnCriticalPath"]
+    },
+    {
+      "viewTitle": "PDCA Analysis",
+      "viewQuery": "<OrderBy><FieldRef Name='ActualEndDate' Ascending='FALSE'/></OrderBy>",
+      "viewFields": ["Title", "TaskTypeId", "Department", "PlannedDurationDays", "ActualStartDate", "ActualEndDate", "VarianceDays", "DelayReasonId", "IsUnplanned"]
+    }
+  ]
+}

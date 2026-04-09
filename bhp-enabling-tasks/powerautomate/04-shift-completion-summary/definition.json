@@ -1,0 +1,171 @@
+{
+  "name": "BMA_Enabling_Tasks_Shift_Completion_Summary",
+  "description": "Runs at 18:30 AEST (end of day shift) and 06:30 AEST (end of night shift) every day. Generates a cross-site, cross-department enabling task completion report and sends it to the mine planner and each site's mine manager. This is the daily PDCA check — the 'Check' in Plan-Do-Check-Act. Provides the data for the next morning's enabling task board meeting.",
+  "trigger": {
+    "type": "Recurrence",
+    "recurrence": {
+      "frequency": "Day",
+      "interval": 1,
+      "schedule": {
+        "hours": ["6", "18"],
+        "minutes": ["30"]
+      },
+      "timeZone": "E. Australia Standard Time",
+      "startTime": "2024-01-01T06:30:00"
+    }
+  },
+  "actions": {
+    "Initialize_Report_Date": {
+      "type": "InitializeVariable",
+      "order": 1,
+      "inputs": {
+        "variables": [{
+          "name": "ReportDate",
+          "type": "string",
+          "value": "@{formatDateTime(utcNow(), 'yyyy-MM-dd')}"
+        }]
+      }
+    },
+    "Initialize_Shift": {
+      "type": "InitializeVariable",
+      "order": 2,
+      "inputs": {
+        "variables": [{
+          "name": "ShiftName",
+          "type": "string",
+          "value": "@{if(greater(int(formatDateTime(utcNow(), 'HH')), 12), 'Day Shift (ending)', 'Night Shift (ending)')}"
+        }]
+      }
+    },
+    "Loop_Sites": {
+      "type": "Foreach",
+      "order": 3,
+      "foreach": ["Saraji", "Caval Ridge"],
+      "actions": {
+        "Get_All_Active_Tasks": {
+          "type": "ApiConnection",
+          "order": 1,
+          "description": "All non-cancelled tasks with PlannedEndDate on or before today",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetItems",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+            },
+            "parameters": {
+              "dataset": "https://bhp.sharepoint.com/sites/BMAEnablingTasks",
+              "table": "EnabledTasks",
+              "$filter": "Site eq '@{items('Loop_Sites')}' and Status ne 'Cancelled' and PlannedEndDate le '@{variables('ReportDate')}'",
+              "$top": 200
+            }
+          }
+        },
+        "Filter_Completed_Today": {
+          "type": "Query",
+          "order": 2,
+          "inputs": {
+            "from": "@body('Get_All_Active_Tasks')?['value']",
+            "where": "@equals(item()?['Status'], 'Complete')"
+          }
+        },
+        "Filter_Still_Open": {
+          "type": "Query",
+          "order": 3,
+          "inputs": {
+            "from": "@body('Get_All_Active_Tasks')?['value']",
+            "where": "@and(not(equals(item()?['Status'], 'Complete')), not(equals(item()?['Status'], 'Cancelled')))"
+          }
+        },
+        "Filter_Critical_Path_Open": {
+          "type": "Query",
+          "order": 4,
+          "inputs": {
+            "from": "@body('Filter_Still_Open')",
+            "where": "@equals(item()?['IsOnCriticalPath'], true)"
+          }
+        },
+        "Filter_Delayed": {
+          "type": "Query",
+          "order": 5,
+          "inputs": {
+            "from": "@body('Filter_Still_Open')",
+            "where": "@equals(item()?['Status'], 'Delayed')"
+          }
+        },
+        "Build_Open_Task_List": {
+          "type": "Select",
+          "order": 6,
+          "inputs": {
+            "from": "@body('Filter_Still_Open')",
+            "select": {
+              "row": "@{if(equals(item()?['IsOnCriticalPath'], true), '🔴 ', '• ')}**@{item()?['Title']}** — @{item()?['Department']} | Due: @{formatDateTime(item()?['PlannedEndDate'], 'dd MMM')} | @{item()?['Status']}@{if(not(empty(item()?['DelayReasonId']?.Title)), concat(' (', item()?['DelayReasonId']?.Title, ')'), '')}"
+            }
+          }
+        },
+        "Join_Open_Tasks": {
+          "type": "Join",
+          "order": 7,
+          "inputs": {
+            "from": "@body('Build_Open_Task_List')",
+            "joinWith": "\n"
+          }
+        },
+        "Calculate_Completion_Rate": {
+          "type": "Compose",
+          "order": 8,
+          "inputs": "@{if(equals(length(body('Get_All_Active_Tasks')?['value']), 0), 0, div(mul(length(body('Filter_Completed_Today')), 100), length(body('Get_All_Active_Tasks')?['value'])))}"
+        },
+        "Get_Planner_Emails": {
+          "type": "ApiConnection",
+          "order": 9,
+          "inputs": {
+            "host": {
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetItems",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+            },
+            "parameters": {
+              "dataset": "https://bhp.sharepoint.com/sites/BMAEnablingTasks",
+              "table": "EnabledTasks",
+              "$select": "PlannerEmail",
+              "$filter": "Site eq '@{items('Loop_Sites')}'",
+              "$top": 1
+            }
+          }
+        },
+        "Send_Shift_Summary_Email": {
+          "type": "ApiConnection",
+          "order": 10,
+          "description": "Send HTML email summary to mine planner — email format is easier to forward and archive than Teams for management reporting",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_office365",
+              "operationId": "SendEmailV2",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+            },
+            "parameters": {
+              "emailMessage/to": "@{first(body('Get_Planner_Emails')?['value'])?['PlannerEmail']?['Email']}",
+              "emailMessage/subject": "Enabling Task Summary — @{items('Loop_Sites')} | @{variables('ShiftName')} | @{formatDateTime(utcNow(), 'dd MMM yyyy')}",
+              "emailMessage/body": "<html><body style='font-family: Arial, sans-serif; max-width: 700px;'><h2 style='color:#DB251C;'>BHP BMA Enabling Task Summary</h2><h3>@{items('Loop_Sites')} | @{variables('ShiftName')} | @{formatDateTime(utcNow(), 'dd MMM yyyy')}</h3><table style='width:100%;border-collapse:collapse;margin-bottom:20px;'><tr style='background-color:#212121;color:white;'><td style='padding:10px;'>Total Tasks Due</td><td style='padding:10px;text-align:center;font-weight:bold;'>@{length(body('Get_All_Active_Tasks')?['value'])}</td></tr><tr style='background-color:#E8F5E9;'><td style='padding:10px;'>Completed</td><td style='padding:10px;text-align:center;font-weight:bold;color:#2E7D32;'>@{length(body('Filter_Completed_Today'))}</td></tr><tr style='background-color:@{if(greater(length(body('Filter_Still_Open')), 0), '#FFF9C4', '#E8F5E9')};'><td style='padding:10px;'>Still Open / Overdue</td><td style='padding:10px;text-align:center;font-weight:bold;color:@{if(greater(length(body('Filter_Still_Open')), 0), '#E65100', '#2E7D32')};'>@{length(body('Filter_Still_Open'))}</td></tr><tr style='background-color:@{if(greater(length(body('Filter_Critical_Path_Open')), 0), '#FFEBEE', '#E8F5E9')};'><td style='padding:10px;'>Critical Path — Open</td><td style='padding:10px;text-align:center;font-weight:bold;color:@{if(greater(length(body('Filter_Critical_Path_Open')), 0), '#C62828', '#2E7D32')};'>@{length(body('Filter_Critical_Path_Open'))}</td></tr><tr><td style='padding:10px;background-color:#F5F5F5;'>Completion Rate</td><td style='padding:10px;text-align:center;font-weight:bold;font-size:18px;color:@{if(greater(outputs('Calculate_Completion_Rate'), 89), '#2E7D32', if(greater(outputs('Calculate_Completion_Rate'), 74), '#E65100', '#C62828'))};'>@{outputs('Calculate_Completion_Rate')}%</td></tr></table>@{if(greater(length(body('Filter_Still_Open')), 0), concat('<h3>Open / Overdue Tasks — Action Required</h3><p style=\"font-family:monospace;background:#F5F5F5;padding:12px;\">', replace(body('Join_Open_Tasks'), '\n', '<br/>'), '</p>'), '<p style=\"color:#2E7D32;font-weight:bold;\">✅ All scheduled enabling tasks completed this shift.</p>')}<hr/><p style='color:#757575;font-size:12px;'>Generated automatically by BHP BMA Enabling Task Manager. For full analysis, open the Power BI PDCA dashboard.</p></body></html>",
+              "emailMessage/isHtml": true
+            }
+          }
+        }
+      }
+    }
+  },
+  "connections": {
+    "shared_sharepointonline": {
+      "connectionName": "shared_sharepointonline",
+      "id": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+    },
+    "shared_teams": {
+      "connectionName": "shared_teams",
+      "id": "/providers/Microsoft.PowerApps/apis/shared_teams"
+    },
+    "shared_office365": {
+      "connectionName": "shared_office365",
+      "id": "/providers/Microsoft.PowerApps/apis/shared_office365"
+    }
+  }
+}

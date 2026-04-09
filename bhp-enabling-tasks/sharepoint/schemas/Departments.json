@@ -1,0 +1,74 @@
+{
+  "listTitle": "Departments",
+  "listDescription": "BMA department reference list — maps departments to Teams channels, superintendents, and site assignments. Used by Power Automate flows for routing notifications.",
+  "templateType": 100,
+  "columns": [
+    {
+      "internalName": "Title",
+      "displayName": "Department Name",
+      "type": "Text",
+      "required": true,
+      "maxLength": 100
+    },
+    {
+      "internalName": "Site",
+      "displayName": "Mine Site",
+      "type": "Choice",
+      "required": true,
+      "choices": ["Saraji", "Caval Ridge", "Both"]
+    },
+    {
+      "internalName": "ParentDepartment",
+      "displayName": "Parent Department",
+      "type": "Text",
+      "required": false,
+      "maxLength": 100,
+      "description": "e.g. Mine Services is the parent of Mine Services - Pump Crew"
+    },
+    {
+      "internalName": "SuperintendentEmail",
+      "displayName": "Superintendent",
+      "type": "User",
+      "required": true,
+      "description": "Current superintendent — receives overdue task escalation alerts"
+    },
+    {
+      "internalName": "TeamsChannelId",
+      "displayName": "Teams Channel ID",
+      "type": "Text",
+      "required": false,
+      "maxLength": 500,
+      "description": "Microsoft Teams channel ID for automated task notifications. Obtain from Teams > channel > Get link to channel."
+    },
+    {
+      "internalName": "TeamsChannelName",
+      "displayName": "Teams Channel Name",
+      "type": "Text",
+      "required": false,
+      "maxLength": 200
+    },
+    {
+      "internalName": "TeamsGroupId",
+      "displayName": "Teams Group ID",
+      "type": "Text",
+      "required": false,
+      "maxLength": 500,
+      "description": "Microsoft Teams group (team) ID containing the channel above"
+    },
+    {
+      "internalName": "DepartmentColor",
+      "displayName": "Dashboard Color (Hex)",
+      "type": "Text",
+      "required": false,
+      "maxLength": 10,
+      "description": "Hex color code for this department's visual management cards in Power Apps (e.g. #E53935)"
+    },
+    {
+      "internalName": "IsActive",
+      "displayName": "Active",
+      "type": "Boolean",
+      "required": false,
+      "defaultValue": true
+    }
+  ]
+}

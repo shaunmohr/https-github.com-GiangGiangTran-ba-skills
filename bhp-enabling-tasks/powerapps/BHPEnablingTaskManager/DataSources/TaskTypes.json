@@ -1,0 +1,16 @@
+{
+  "Type": "SharePoint",
+  "Name": "TaskTypes",
+  "DisplayName": "Task Types",
+  "DataSourceDefinition": {
+    "SharePointSiteUrl": "https://bhp.sharepoint.com/sites/BMAEnablingTasks",
+    "ListName": "TaskTypes",
+    "KeyColumns": ["ID"],
+    "ColumnsToRetrieve": [
+      "ID", "Title", "Category", "DefaultDepartment",
+      "DurationP50Days", "DurationP80Days", "DurationP90Days",
+      "SampleSize", "DoneDefinition", "PlannerNotes",
+      "TypicalPredecessors", "TypicalSuccessors", "IsActive"
+    ]
+  }
+}

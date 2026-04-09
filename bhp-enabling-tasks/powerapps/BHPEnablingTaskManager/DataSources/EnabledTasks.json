@@ -1,0 +1,18 @@
+{
+  "Type": "SharePoint",
+  "Name": "EnabledTasks",
+  "DisplayName": "Enabled Tasks",
+  "DataSourceDefinition": {
+    "SharePointSiteUrl": "https://bhp.sharepoint.com/sites/BMAEnablingTasks",
+    "ListName": "EnabledTasks",
+    "KeyColumns": ["ID"],
+    "ColumnsToRetrieve": [
+      "ID", "Title", "TaskTypeId", "Department", "Site", "PitBlock",
+      "PlannedStartDate", "PlannedEndDate", "PlannedDurationDays",
+      "ActualStartDate", "ActualEndDate", "Status", "PriorityLevel",
+      "IsOnCriticalPath", "DelayReasonId", "DelayNotes",
+      "EquipmentMovementId", "ShiftType", "PlannerEmail", "SupervisorEmail",
+      "IsUnplanned", "VarianceDays", "Created", "Modified"
+    ]
+  }
+}

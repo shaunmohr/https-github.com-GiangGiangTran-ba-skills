@@ -1,0 +1,147 @@
+{
+  "name": "BMA_Enabling_Tasks_Overdue_Alert",
+  "description": "Runs every 2 hours between 07:00 and 17:00 AEST on weekdays. Detects enabling tasks that are past their planned end date without being marked complete. Sends a targeted alert to the responsible superintendent (not a broadcast — only the accountable person is notified). Escalates to mine planner if the task is on the critical path.",
+  "trigger": {
+    "type": "Recurrence",
+    "recurrence": {
+      "frequency": "Hour",
+      "interval": 2,
+      "schedule": {
+        "hours": ["7", "9", "11", "13", "15", "17"],
+        "minutes": ["0"],
+        "weekDays": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+      },
+      "timeZone": "E. Australia Standard Time",
+      "startTime": "2024-01-01T07:00:00"
+    }
+  },
+  "actions": {
+    "Get_Overdue_Tasks": {
+      "type": "ApiConnection",
+      "order": 1,
+      "description": "Get all tasks that are past their planned end date and not complete",
+      "inputs": {
+        "host": {
+          "connectionName": "shared_sharepointonline",
+          "operationId": "GetItems",
+          "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+        },
+        "parameters": {
+          "dataset": "https://bhp.sharepoint.com/sites/BMAEnablingTasks",
+          "table": "EnabledTasks",
+          "$filter": "Status ne 'Complete' and Status ne 'Cancelled' and PlannedEndDate lt '@{formatDateTime(utcNow(), 'yyyy-MM-dd')}'",
+          "$orderby": "IsOnCriticalPath desc, PlannedEndDate asc",
+          "$top": 100
+        }
+      }
+    },
+    "Condition_Has_Overdue": {
+      "type": "If",
+      "order": 2,
+      "expression": {
+        "greater": ["@length(body('Get_Overdue_Tasks')?['value'])", 0]
+      },
+      "actions": {
+        "Loop_Overdue_Tasks": {
+          "type": "Foreach",
+          "order": 1,
+          "foreach": "@body('Get_Overdue_Tasks')?['value']",
+          "runtimeConfiguration": {
+            "concurrency": {
+              "repetitions": 1
+            }
+          },
+          "actions": {
+            "Get_Department_Info": {
+              "type": "ApiConnection",
+              "order": 1,
+              "description": "Look up the department record to get the superintendent's email and Teams channel",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_sharepointonline",
+                  "operationId": "GetItems",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                },
+                "parameters": {
+                  "dataset": "https://bhp.sharepoint.com/sites/BMAEnablingTasks",
+                  "table": "Departments",
+                  "$filter": "Title eq '@{items('Loop_Overdue_Tasks')?['Department']}' and Site eq '@{items('Loop_Overdue_Tasks')?['Site']}'",
+                  "$top": 1
+                }
+              }
+            },
+            "Calculate_Days_Overdue": {
+              "type": "Compose",
+              "order": 2,
+              "inputs": "@{div(sub(ticks(formatDateTime(utcNow(), 'yyyy-MM-dd')), ticks(items('Loop_Overdue_Tasks')?['PlannedEndDate'])), 864000000000)}"
+            },
+            "Send_Superintendent_Alert": {
+              "type": "ApiConnection",
+              "order": 3,
+              "description": "Send a targeted Teams message directly to the superintendent — not a broadcast",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_teams",
+                  "operationId": "PostMessageToConversation",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams"
+                },
+                "parameters": {
+                  "poster": "Flow bot",
+                  "location": "Chat with Flow bot",
+                  "body/recipient/to": "@{first(body('Get_Department_Info')?['value'])?['SuperintendentEmail']?['Email']}",
+                  "body/messageBody": "## ⚠️ Overdue Enabling Task — Action Required\n\n**Task:** @{items('Loop_Overdue_Tasks')?['Title']}\n**Site:** @{items('Loop_Overdue_Tasks')?['Site']}\n**Department:** @{items('Loop_Overdue_Tasks')?['Department']}\n**Was due:** @{formatDateTime(items('Loop_Overdue_Tasks')?['PlannedEndDate'], 'dd MMM yyyy')}\n**Days overdue:** @{outputs('Calculate_Days_Overdue')} day(s)\n**Current status:** @{items('Loop_Overdue_Tasks')?['Status']}\n@{if(equals(items('Loop_Overdue_Tasks')?['IsOnCriticalPath'], true), '🔴 **THIS TASK IS ON THE CRITICAL PATH — delay affects equipment movement schedule**', '')}\n\n**Action required:** Open the Enabling Task Manager app, update the task status and add a delay reason if the task cannot be completed today.\n\n*If this task has already been completed, please mark it complete in the app so this alert stops.*"
+                }
+              }
+            },
+            "Condition_Critical_Path_Escalation": {
+              "type": "If",
+              "order": 4,
+              "description": "If critical path AND more than 1 day overdue, also alert the mine planner",
+              "expression": {
+                "and": [
+                  {"equals": ["@items('Loop_Overdue_Tasks')?['IsOnCriticalPath']", true]},
+                  {"greaterOrEquals": ["@outputs('Calculate_Days_Overdue')", 1]}
+                ]
+              },
+              "actions": {
+                "Get_Planner_Email": {
+                  "type": "Compose",
+                  "order": 1,
+                  "inputs": "@{items('Loop_Overdue_Tasks')?['PlannerEmail']?['Email']}"
+                },
+                "Alert_Mine_Planner": {
+                  "type": "ApiConnection",
+                  "order": 2,
+                  "description": "Escalate to mine planner for critical path overdue tasks",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_teams",
+                      "operationId": "PostMessageToConversation",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams"
+                    },
+                    "parameters": {
+                      "poster": "Flow bot",
+                      "location": "Chat with Flow bot",
+                      "body/recipient/to": "@{outputs('Get_Planner_Email')}",
+                      "body/messageBody": "## 🔴 ESCALATION — Critical Path Task Overdue\n\n**Task:** @{items('Loop_Overdue_Tasks')?['Title']}\n**Site:** @{items('Loop_Overdue_Tasks')?['Site']}\n**Department:** @{items('Loop_Overdue_Tasks')?['Department']}\n**Planned completion:** @{formatDateTime(items('Loop_Overdue_Tasks')?['PlannedEndDate'], 'dd MMM yyyy')}\n**Days overdue:** @{outputs('Calculate_Days_Overdue')} day(s)\n\n⚠️ This enabling task is on the critical path. Delay to this task will delay the next scheduled equipment movement.\n\nThe department superintendent has been notified. This escalation is for your awareness and schedule management.\n\n*Linked equipment movement: @{items('Loop_Overdue_Tasks')?['EquipmentMovementId']?.Title}*"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "connections": {
+    "shared_sharepointonline": {
+      "connectionName": "shared_sharepointonline",
+      "id": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+    },
+    "shared_teams": {
+      "connectionName": "shared_teams",
+      "id": "/providers/Microsoft.PowerApps/apis/shared_teams"
+    }
+  }
+}
