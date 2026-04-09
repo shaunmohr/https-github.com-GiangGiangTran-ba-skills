@@ -1,0 +1,109 @@
+{
+  "_comment": "Mine Site Task Management — Flow 5: Task Completed",
+  "_instructions": "Build this flow manually in Power Automate using Document 7 as your guide.",
+  "flow": {
+    "name": "MineTasks_Flow5_TaskCompleted",
+    "description": "Fires when a WorkTasks item is modified. Checks if Status changed to 'Completed'. If yes: creates a CompletionRegister record, posts to Management Teams channel, emails Department Manager, and escalates to Mine Manager if Critical.",
+    "trigger": {
+      "type": "SharePoint - When an item is modified",
+      "site": "[SHAREPOINT_SITE_URL]",
+      "list": "WorkTasks"
+    },
+    "actions": [
+      {
+        "step": 1,
+        "name": "CheckIfCompleted",
+        "type": "Control - Condition",
+        "condition": {
+          "left": "@{triggerOutputs()?['body/Status/Value']}",
+          "operator": "is equal to",
+          "right": "Completed"
+        }
+      },
+      {
+        "step": 2,
+        "name": "GetManagerContact",
+        "type": "SharePoint - Get items",
+        "description": "Inside YES branch: retrieves manager email for the task's department",
+        "site": "[SHAREPOINT_SITE_URL]",
+        "list": "DepartmentContacts",
+        "filterQuery": "Department eq '@{triggerOutputs()?[\"body/Department/Value\"]}'"
+      },
+      {
+        "step": 3,
+        "name": "CreateCompletionRegisterRecord",
+        "type": "SharePoint - Create item",
+        "description": "Creates a permanent audit record of the completed task",
+        "site": "[SHAREPOINT_SITE_URL]",
+        "list": "CompletionRegister",
+        "fieldMappings": {
+          "Title": "Task Title from trigger",
+          "Department": "Department from trigger",
+          "Priority": "Priority from trigger",
+          "AssignedSupervisor": "Assigned Supervisor from trigger",
+          "ScheduledDate": "Scheduled Date from trigger",
+          "ActualStartTime": "Actual Start Time from trigger",
+          "ActualCompletionTime": "Actual Completion Time from trigger",
+          "ExecutedBy": "Executed By from trigger",
+          "CrewMembers": "Crew Required from trigger",
+          "EquipmentUsed": "Equipment Required from trigger",
+          "CompletionNotes": "Completion Notes from trigger",
+          "IssuesEncountered": "Issues Encountered from trigger",
+          "OriginalTaskID": "Task ID from trigger",
+          "CompletionLogged": "utcNow()"
+        }
+      },
+      {
+        "step": 4,
+        "name": "PostToManagementChannel",
+        "type": "Teams - Post message in channel",
+        "team": "Mine Site Operations",
+        "channel": "Management Summary",
+        "message": "Task completed notification with department, supervisor, crew, timeline, notes, and issues"
+      },
+      {
+        "step": 5,
+        "name": "SendEmailToManager",
+        "type": "Outlook - Send an email (V2)",
+        "to": "Manager Email from GetManagerContact",
+        "subject": "[TASK COMPLETED] @{triggerOutputs()?['body/Title']} — @{triggerOutputs()?['body/Department/Value']}",
+        "body": "Full HTML completion report — see Document 7 Step 7 for complete HTML"
+      },
+      {
+        "step": 6,
+        "name": "CheckIfCritical",
+        "type": "Control - Condition",
+        "condition": {
+          "left": "@{triggerOutputs()?['body/Priority/Value']}",
+          "operator": "is equal to",
+          "right": "Critical"
+        },
+        "yesBranch": [
+          {
+            "step": "6a",
+            "name": "EscalationEmailToMineManager",
+            "type": "Outlook - Send an email (V2)",
+            "to": "[MINE_MANAGER_EMAIL]",
+            "subject": "[CRITICAL TASK COMPLETED] @{triggerOutputs()?['body/Title']}",
+            "body": "Critical completion report with red header styling"
+          },
+          {
+            "step": "6b",
+            "name": "PostToCriticalAlertsChannel",
+            "type": "Teams - Post message in channel",
+            "team": "Mine Site Operations",
+            "channel": "Critical Alerts",
+            "message": "Critical task completion summary with issues highlighted"
+          }
+        ],
+        "noBranch": "No action — non-critical completions do not escalate"
+      },
+      {
+        "step": 7,
+        "name": "TerminateIfNotCompleted",
+        "type": "Control - Terminate (in outer NO branch)",
+        "status": "Succeeded"
+      }
+    ]
+  }
+}

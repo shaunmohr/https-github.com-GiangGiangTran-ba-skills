@@ -1,0 +1,92 @@
+{
+  "_comment": "Mine Site Task Management — Flow 1: Task Initiated",
+  "_instructions": "This is a reference definition. In Power Automate, build this flow manually using Document 3 as your guide. Replace all [PLACEHOLDER] values with your real tenant/site details before use.",
+  "_placeholders": {
+    "[SHAREPOINT_SITE_URL]": "https://yourcompany.sharepoint.com/sites/MineSiteTasks",
+    "[YOUR_TENANT]": "yourcompany",
+    "[MINE_MANAGER_EMAIL]": "minemanager@yourcompany.com"
+  },
+  "flow": {
+    "name": "MineTasks_Flow1_TaskInitiated",
+    "description": "Triggered when a new task is created in WorkTasks. Generates a Task ID, notifies the assigned supervisor via Teams and Email, and escalates if Critical priority.",
+    "trigger": {
+      "type": "SharePoint - When an item is created",
+      "site": "[SHAREPOINT_SITE_URL]",
+      "list": "WorkTasks"
+    },
+    "actions": [
+      {
+        "step": 1,
+        "name": "GetDepartmentContact",
+        "type": "SharePoint - Get items",
+        "description": "Looks up supervisor and manager email from DepartmentContacts list",
+        "site": "[SHAREPOINT_SITE_URL]",
+        "list": "DepartmentContacts",
+        "filterQuery": "Department eq '@{triggerOutputs()?[\"body/Department/Value\"]}'"
+      },
+      {
+        "step": 2,
+        "name": "InitializeTaskID",
+        "type": "Variables - Initialize variable",
+        "description": "Generates a unique Task ID: e.g. LOA-20260609-4821",
+        "variableName": "TaskID",
+        "variableType": "String",
+        "valueExpression": "concat(toUpper(substring(triggerOutputs()?['body/Department/Value'],0,3)),'-',formatDateTime(utcNow(),'yyyyMMdd'),'-',substring(string(rand(1000,9999)),0,4))"
+      },
+      {
+        "step": 3,
+        "name": "UpdateTaskWithID",
+        "type": "SharePoint - Update item",
+        "description": "Writes the generated Task ID and Initiated Date back to the WorkTasks item",
+        "site": "[SHAREPOINT_SITE_URL]",
+        "list": "WorkTasks",
+        "itemId": "@{triggerOutputs()?['body/ID']}",
+        "fields": {
+          "TaskID": "@{variables('TaskID')}",
+          "InitiatedDate": "@{utcNow()}"
+        }
+      },
+      {
+        "step": 4,
+        "name": "SendTeamsCardToSupervisor",
+        "type": "Teams - Post Adaptive Card to user",
+        "description": "Sends an Adaptive Card to the supervisor via Teams chat",
+        "postAs": "Flow bot",
+        "postIn": "Chat with Flow bot",
+        "recipient": "@{first(body('GetDepartmentContact')?['value'])?['SupervisorEmail']}",
+        "adaptiveCard": "See Document 3, Step 7 for the full Adaptive Card JSON"
+      },
+      {
+        "step": 5,
+        "name": "SendEmailToSupervisor",
+        "type": "Outlook - Send an email (V2)",
+        "description": "Sends a formatted HTML email to the assigned supervisor",
+        "to": "@{first(body('GetDepartmentContact')?['value'])?['SupervisorEmail']}",
+        "subject": "[ACTION REQUIRED] New Work Task: @{triggerOutputs()?['body/Title']} — @{triggerOutputs()?['body/Department/Value']}",
+        "body": "See Document 3, Step 8 for the full HTML email body"
+      },
+      {
+        "step": 6,
+        "name": "CheckIfCritical",
+        "type": "Control - Condition",
+        "description": "Branches based on whether priority is Critical",
+        "condition": {
+          "left": "@{triggerOutputs()?['body/Priority/Value']}",
+          "operator": "is equal to",
+          "right": "Critical"
+        },
+        "yesBranch": [
+          {
+            "step": "6a",
+            "name": "EscalationEmailToMineManager",
+            "type": "Outlook - Send an email (V2)",
+            "to": "[MINE_MANAGER_EMAIL]",
+            "subject": "[CRITICAL TASK ALERT] @{triggerOutputs()?['body/Title']}",
+            "body": "Critical priority task escalation with full task details"
+          }
+        ],
+        "noBranch": "Terminate (Succeeded)"
+      }
+    ]
+  }
+}

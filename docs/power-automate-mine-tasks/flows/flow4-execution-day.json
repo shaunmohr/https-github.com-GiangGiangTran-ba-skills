@@ -1,0 +1,104 @@
+{
+  "_comment": "Mine Site Task Management — Flow 4: Execution Day Morning Briefing",
+  "_instructions": "Build this as a Scheduled cloud flow in Power Automate using Document 6 as your guide.",
+  "flow": {
+    "name": "MineTasks_Flow4_ExecutionDayBriefing",
+    "description": "Runs every day at 6:00 AM. Queries all WorkTasks with Scheduled Date = today and Status = 'Scheduled'. Updates each to 'In Progress', sends a Teams Adaptive Card execution briefing to each supervisor, posts to department channel, and emails Mine Manager with daily summary.",
+    "trigger": {
+      "type": "Recurrence - Scheduled",
+      "frequency": "Day",
+      "interval": 1,
+      "startTime": "06:00 AM",
+      "timezone": "(UTC+10:00) Brisbane — CHANGE TO YOUR LOCAL TIMEZONE"
+    },
+    "actions": [
+      {
+        "step": 1,
+        "name": "InitializeTodayDate",
+        "type": "Variables - Initialize variable",
+        "variableName": "TodayDate",
+        "variableType": "String",
+        "valueExpression": "formatDateTime(utcNow(), 'yyyy-MM-dd')"
+      },
+      {
+        "step": 2,
+        "name": "InitializeTodayDateDisplay",
+        "type": "Variables - Initialize variable",
+        "variableName": "TodayDateDisplay",
+        "variableType": "String",
+        "valueExpression": "formatDateTime(utcNow(), 'dddd dd MMMM yyyy')"
+      },
+      {
+        "step": 3,
+        "name": "GetTodaysTasks",
+        "type": "SharePoint - Get items",
+        "site": "[SHAREPOINT_SITE_URL]",
+        "list": "WorkTasks",
+        "filterQuery": "Status/Value eq 'Scheduled' and ScheduledDate eq '@{variables('TodayDate')}'",
+        "topCount": 50
+      },
+      {
+        "step": 4,
+        "name": "CheckIfTasksExist",
+        "type": "Control - Condition",
+        "condition": {
+          "left": "length(body('GetTodaysTasks')?['value'])",
+          "operator": "is greater than",
+          "right": "0"
+        }
+      },
+      {
+        "step": 5,
+        "name": "ApplyToEachTask",
+        "type": "Control - Apply to each",
+        "description": "Inside YES branch",
+        "loopOver": "value from GetTodaysTasks",
+        "actions": [
+          {
+            "step": "5a",
+            "name": "UpdateStatusToInProgress",
+            "type": "SharePoint - Update item",
+            "site": "[SHAREPOINT_SITE_URL]",
+            "list": "WorkTasks",
+            "itemId": "@{items('Apply_to_each')?['ID']}",
+            "fields": {
+              "Status": "In Progress"
+            }
+          },
+          {
+            "step": "5b",
+            "name": "SendExecutionDayCard",
+            "type": "Teams - Post Adaptive Card to user",
+            "recipient": "Assigned Supervisor Email from task item",
+            "description": "Sends a prominent execution-day briefing card with task details and a direct link to mark complete",
+            "cardIncludes": ["Today date", "Task title", "Department", "Priority", "Start time", "Shift", "Crew", "Equipment", "Permits", "Duration", "Open task button", "Open Power Apps button"]
+          },
+          {
+            "step": "5c",
+            "name": "PostToTodaysTasksChannel",
+            "type": "Teams - Post message in channel",
+            "team": "Mine Site Operations",
+            "channel": "Today's Tasks",
+            "message": "Live task briefing with department, supervisor, start time, crew, and equipment"
+          }
+        ]
+      },
+      {
+        "step": 6,
+        "name": "SendManagerDailySummary",
+        "type": "Outlook - Send an email (V2)",
+        "description": "After loop — sends a single consolidated daily summary to Mine Manager",
+        "to": "[MINE_MANAGER_EMAIL]",
+        "subject": "[DAILY TASK BRIEFING] @{variables('TodayDateDisplay')} — @{length(body('GetTodaysTasks')?['value'])} Active Tasks",
+        "body": "Summary of all tasks active today with link to SharePoint"
+      },
+      {
+        "step": 7,
+        "name": "TerminateIfNoTasks",
+        "type": "Control - Terminate (in NO branch)",
+        "status": "Succeeded"
+      }
+    ],
+    "advancedNote": "For shift-based timing, create 3 separate versions of this flow: Flow4a (6AM, Day Shift filter), Flow4b (12PM, Afternoon Shift filter), Flow4c (4PM, Night Shift filter)"
+  }
+}

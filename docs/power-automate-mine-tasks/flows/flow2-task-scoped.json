@@ -1,0 +1,71 @@
+{
+  "_comment": "Mine Site Task Management — Flow 2: Task Scoped",
+  "_instructions": "Build this flow manually in Power Automate using Document 4 as your guide. Replace all [PLACEHOLDER] values.",
+  "flow": {
+    "name": "MineTasks_Flow2_TaskScoped",
+    "description": "Fires when a WorkTasks item is modified. Checks if Status changed to 'Scoped'. If yes, notifies the Task Scheduler via Teams and email, and posts to the department channel.",
+    "trigger": {
+      "type": "SharePoint - When an item is modified",
+      "site": "[SHAREPOINT_SITE_URL]",
+      "list": "WorkTasks"
+    },
+    "actions": [
+      {
+        "step": 1,
+        "name": "CheckIfScoped",
+        "type": "Control - Condition",
+        "description": "Only proceed if Status was updated to 'Scoped'. This prevents the flow firing on every field change.",
+        "condition": {
+          "left": "@{triggerOutputs()?['body/Status/Value']}",
+          "operator": "is equal to",
+          "right": "Scoped"
+        }
+      },
+      {
+        "step": 2,
+        "name": "GetDepartmentContact",
+        "type": "SharePoint - Get items",
+        "description": "Inside YES branch: looks up manager/scheduler contact",
+        "site": "[SHAREPOINT_SITE_URL]",
+        "list": "DepartmentContacts",
+        "filterQuery": "Department eq '@{triggerOutputs()?[\"body/Department/Value\"]}'"
+      },
+      {
+        "step": 3,
+        "name": "ParallelBranch",
+        "type": "Control - Parallel branch",
+        "description": "Runs Teams notification and email simultaneously for speed",
+        "branchA": {
+          "name": "TeamsMessageToSchedulingChannel",
+          "type": "Teams - Post message in channel",
+          "team": "Mine Site Operations",
+          "channel": "Task Scheduling",
+          "message": "Task scoped and ready for scheduling. Full details including crew, equipment, permits, duration."
+        },
+        "branchB": {
+          "name": "EmailToScheduler",
+          "type": "Outlook - Send an email (V2)",
+          "to": "[SCHEDULER_EMAIL]",
+          "subject": "[SCHEDULE REQUIRED] @{triggerOutputs()?['body/Title']} — @{triggerOutputs()?['body/Department/Value']}",
+          "body": "See Document 4, Step 5 Branch B for the full HTML email body"
+        }
+      },
+      {
+        "step": 4,
+        "name": "PostToDepartmentChannel",
+        "type": "Teams - Post message in channel",
+        "description": "Posts a summary to the relevant department channel after parallel branch completes",
+        "team": "Mine Site Operations",
+        "channel": "Dynamic — matches department name (Mine Planning / Mine Services / Load & Haul / Drill & Blast / Dragline)",
+        "message": "Task scoped notification with department, supervisor, and priority details"
+      },
+      {
+        "step": 5,
+        "name": "TerminateIfNotScoped",
+        "type": "Control - Terminate (in NO branch)",
+        "status": "Succeeded",
+        "description": "Gracefully exits if the status change was not to 'Scoped'"
+      }
+    ]
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "_comment": "Mine Site Task Management — Flow 3: Day-Before Reminder",
+  "_instructions": "Build this as a Scheduled cloud flow in Power Automate using Document 5 as your guide.",
+  "flow": {
+    "name": "MineTasks_Flow3_DayBeforeReminder",
+    "description": "Runs every day at 4:00 PM. Queries all WorkTasks scheduled for tomorrow with Status = 'Scheduled'. Sends Teams card and email reminder to each supervisor for each task.",
+    "trigger": {
+      "type": "Recurrence - Scheduled",
+      "frequency": "Day",
+      "interval": 1,
+      "startTime": "04:00 PM",
+      "timezone": "(UTC+10:00) Brisbane — CHANGE TO YOUR LOCAL TIMEZONE"
+    },
+    "actions": [
+      {
+        "step": 1,
+        "name": "InitializeTomorrowDate",
+        "type": "Variables - Initialize variable",
+        "variableName": "TomorrowDate",
+        "variableType": "String",
+        "valueExpression": "formatDateTime(addDays(utcNow(), 1), 'yyyy-MM-dd')"
+      },
+      {
+        "step": 2,
+        "name": "InitializeTomorrowDateDisplay",
+        "type": "Variables - Initialize variable",
+        "variableName": "TomorrowDateDisplay",
+        "variableType": "String",
+        "valueExpression": "formatDateTime(addDays(utcNow(), 1), 'dddd dd MMMM yyyy')"
+      },
+      {
+        "step": 3,
+        "name": "GetTomorrowsTasks",
+        "type": "SharePoint - Get items",
+        "site": "[SHAREPOINT_SITE_URL]",
+        "list": "WorkTasks",
+        "filterQuery": "Status/Value eq 'Scheduled' and ScheduledDate eq '@{variables('TomorrowDate')}'",
+        "topCount": 50
+      },
+      {
+        "step": 4,
+        "name": "CheckIfTasksExist",
+        "type": "Control - Condition",
+        "condition": {
+          "left": "length(body('GetTomorrowsTasks')?['value'])",
+          "operator": "is greater than",
+          "right": "0"
+        }
+      },
+      {
+        "step": 5,
+        "name": "ApplyToEachTask",
+        "type": "Control - Apply to each",
+        "description": "Inside YES branch: loops through each task found",
+        "loopOver": "value from GetTomorrowsTasks",
+        "actions": [
+          {
+            "step": "5a",
+            "name": "GetSupervisorContact",
+            "type": "SharePoint - Get items",
+            "list": "DepartmentContacts",
+            "filterQuery": "Department eq '@{items('Apply_to_each')?['Department']?['Value']}'"
+          },
+          {
+            "step": "5b",
+            "name": "SendTeamsReminderCard",
+            "type": "Teams - Post Adaptive Card to user",
+            "recipient": "Supervisor Email from GetSupervisorContact",
+            "cardContent": "See Document 5, Step 7 Action B for the full Adaptive Card JSON",
+            "includes": ["Tomorrow date", "Task title", "Department", "Priority", "Start time", "Shift", "Crew", "Equipment", "Permits", "Duration"]
+          },
+          {
+            "step": "5c",
+            "name": "SendReminderEmail",
+            "type": "Outlook - Send an email (V2)",
+            "to": "Supervisor Email from GetSupervisorContact",
+            "subject": "[TOMORROW'S TASK] @{items('Apply_to_each')?['Title']} — @{variables('TomorrowDateDisplay')}",
+            "body": "See Document 5, Step 7 Action C for the full HTML email with pre-task checklist"
+          }
+        ]
+      },
+      {
+        "step": 6,
+        "name": "TerminateIfNoTasks",
+        "type": "Control - Terminate (in NO branch)",
+        "status": "Succeeded"
+      }
+    ]
+  }
+}
